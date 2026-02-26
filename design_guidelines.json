@@ -1,0 +1,197 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "Lumière POS",
+      "vibe": "Warm, Elegant, Efficient, Tactile",
+      "archetype": "Organic & Earthy (High-End Hospitality)",
+      "theme_mode": "light"
+    },
+    "colors": {
+      "palette": {
+        "background": {
+          "default": "#FDFBF7",
+          "paper": "#FFFFFF",
+          "subtle": "#F5F5F4"
+        },
+        "primary": {
+          "main": "#C2410C",
+          "light": "#EA580C",
+          "dark": "#9A3412",
+          "foreground": "#FFFFFF"
+        },
+        "secondary": {
+          "main": "#78716C",
+          "light": "#A8A29E",
+          "dark": "#57534E",
+          "foreground": "#FFFFFF"
+        },
+        "accent": {
+          "main": "#84CC16",
+          "foreground": "#1A2E05"
+        },
+        "text": {
+          "primary": "#1C1917",
+          "secondary": "#57534E",
+          "muted": "#A8A29E"
+        },
+        "status": {
+          "success": "#15803D",
+          "warning": "#B45309",
+          "error": "#BE123C",
+          "info": "#0369A1"
+        }
+      },
+      "gradients": {
+        "warm_glow": "linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)",
+        "primary_action": "linear-gradient(to right, #C2410C, #EA580C)"
+      }
+    },
+    "typography": {
+      "font_family": {
+        "headings": "Playfair Display, serif",
+        "body": "Manrope, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "scale": {
+        "h1": "text-4xl md:text-5xl font-bold tracking-tight",
+        "h2": "text-3xl md:text-4xl font-semibold tracking-tight",
+        "h3": "text-2xl font-semibold",
+        "h4": "text-xl font-medium",
+        "body_lg": "text-lg leading-relaxed",
+        "body_base": "text-base leading-relaxed",
+        "caption": "text-sm text-muted-foreground"
+      }
+    },
+    "spacing": {
+      "container_padding": "p-6 md:p-8 lg:p-12",
+      "section_gap": "gap-8 md:gap-12",
+      "item_gap": "gap-4",
+      "touch_target": "min-h-[48px] min-w-[48px]"
+    },
+    "borders": {
+      "radius": {
+        "sm": "rounded-md",
+        "md": "rounded-lg",
+        "lg": "rounded-xl",
+        "full": "rounded-full"
+      },
+      "width": "border",
+      "color": "border-stone-200"
+    },
+    "shadows": {
+      "card": "shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
+      "floating": "shadow-[0_8px_24px_rgba(0,0,0,0.08)]",
+      "inner": "shadow-inner"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-6 rounded-full font-medium shadow-md transition-all active:scale-95",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/90 h-12 px-6 rounded-full font-medium transition-all active:scale-95",
+      "outline": "border-2 border-primary text-primary hover:bg-primary/5 h-12 px-6 rounded-full font-medium transition-all",
+      "ghost": "hover:bg-stone-100 text-stone-700 h-10 px-4 rounded-lg font-medium transition-all"
+    },
+    "cards": {
+      "menu_item": "bg-white rounded-xl border border-stone-100 shadow-card overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer",
+      "dashboard_widget": "bg-white rounded-xl border border-stone-100 shadow-sm p-6",
+      "order_ticket": "bg-white rounded-lg border-l-4 border-l-primary shadow-sm p-4"
+    },
+    "inputs": {
+      "default": "h-12 bg-stone-50 border-stone-200 focus:ring-2 focus:ring-primary/20 focus:border-primary rounded-lg transition-all"
+    },
+    "navigation": {
+      "sidebar": "bg-stone-900 text-stone-50 w-20 lg:w-64 h-screen fixed left-0 top-0 flex flex-col border-r border-stone-800",
+      "sidebar_link": "flex items-center gap-3 p-3 rounded-lg hover:bg-stone-800 transition-colors text-stone-400 hover:text-white",
+      "sidebar_link_active": "bg-primary text-white shadow-md"
+    }
+  },
+  "layout_strategies": {
+    "pos_grid": {
+      "wrapper": "grid grid-cols-12 gap-4 h-[calc(100vh-4rem)]",
+      "menu_section": "col-span-12 lg:col-span-8 overflow-y-auto p-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 content-start",
+      "cart_section": "col-span-12 lg:col-span-4 bg-white border-l border-stone-200 flex flex-col h-full shadow-xl z-10"
+    },
+    "kitchen_display": {
+      "wrapper": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 bg-stone-100 min-h-screen",
+      "ticket": "flex flex-col bg-white rounded-lg shadow-sm border border-stone-200 h-fit"
+    },
+    "floor_plan": {
+      "wrapper": "relative w-full h-[calc(100vh-8rem)] bg-stone-50 rounded-xl border-2 border-dashed border-stone-200 overflow-hidden",
+      "table": "absolute bg-white border-2 border-stone-300 rounded-lg shadow-sm flex items-center justify-center cursor-move hover:border-primary hover:shadow-md transition-all"
+    }
+  },
+  "assets": {
+    "images": {
+      "food": [
+        {
+          "url": "https://images.unsplash.com/photo-1762922425249-144c3bb9167e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwxfHxnb3VybWV0JTIwYnVyZ2VyJTIwcGxhdGUlMjByZXN0YXVyYW50fGVufDB8fHx8MTc3MjEwNjQ0N3ww&ixlib=rb-4.1.0&q=85",
+          "alt": "Gourmet Burger",
+          "category": "main_course"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1762631934138-c4cae144d550?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwzfHxnb3VybWV0JTIwYnVyZ2VyJTIwcGxhdGUlMjByZXN0YXVyYW50fGVufDB8fHx8MTc3MjEwNjQ0N3ww&ixlib=rb-4.1.0&q=85",
+          "alt": "Double Burger Plate",
+          "category": "main_course"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1751890893837-d43f80a5baf8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHw0fHxnb3VybWV0JTIwYnVyZ2VyJTIwcGxhdGUlMjByZXN0YXVyYW50fGVufDB8fHx8MTc3MjEwNjQ0N3ww&ixlib=rb-4.1.0&q=85",
+          "alt": "Brazilian Plate",
+          "category": "main_course"
+        }
+      ],
+      "drinks": [
+        {
+          "url": "https://images.unsplash.com/photo-1768508948990-f5866f800fad?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwxfHxjb2NrdGFpbCUyMGJhciUyMGRyaW5rJTIwZWxlZ2FudHxlbnwwfHx8fDE3NzIxMDY0NDl8MA&ixlib=rb-4.1.0&q=85",
+          "alt": "Champagne Flutes",
+          "category": "drinks"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1746785011420-504d56709419?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwzfHxjb2NrdGFpbCUyMGJhciUyMGRyaW5rJTIwZWxlZ2FudHxlbnwwfHx8fDE3NzIxMDY0NDl8MA&ixlib=rb-4.1.0&q=85",
+          "alt": "Elegant Cocktail",
+          "category": "drinks"
+        }
+      ]
+    },
+    "icons": {
+      "library": "lucide-react",
+      "style": "stroke-width: 1.5px"
+    }
+  },
+  "instructions_to_main_agent": {
+    "general": [
+      "Implement a 'Light Mode' first approach. The UI should feel airy and warm.",
+      "Use 'Playfair Display' for all Section Headings to give that premium restaurant menu feel.",
+      "Use 'Manrope' for all UI text, numbers, and prices for maximum legibility.",
+      "Ensure all touch targets (buttons, menu items) are at least 48px height/width.",
+      "Use the provided image URLs for menu item placeholders.",
+      "For the Floor Plan, use a library like 'dnd-kit' or 'react-draggable' if possible, or standard HTML5 Drag and Drop.",
+      "Strictly separate Kitchen and Bar views. Kitchen gets food orders, Bar gets drink orders."
+    ],
+    "specific_pages": {
+      "login": "Simple, elegant center card with a background image of the restaurant (blurred).",
+      "pos": "Split screen: Left 2/3 for Menu Grid (Bento style), Right 1/3 for Current Order (Cart).",
+      "kitchen": "Kanban-style or Grid of tickets. High contrast. Large fonts. Color coded by wait time (Green > Yellow > Red).",
+      "dashboard": "Bento grid layout for stats. Use Recharts for sales graphs. Warm colors for charts."
+    }
+  },
+  "universal_guidelines": [
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy",
+    "Use glass-morphism effects with backdrop filters (12-24px blur)",
+    "You MUST NOT apply universal transition. Eg: transition: all. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms",
+    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file. This disrupts the human natural reading flow of text",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯📚🎭🎬🎪🎉🎊🎁🎀🎂🍰🎈🎨🎰💰💵💳🏦💎🪙💸🤑📊📈📉💹🔢🏆🥇 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN",
+    "Prioritize using pre-existing components from src/components/ui when applicable",
+    "Create new components that match the style and conventions of existing components when needed",
+    "Examine existing components to understand the project's component patterns before creating new ones",
+    "Components MUST use named exports (export const ComponentName = ...)",
+    "Pages MUST use default exports (export default function PageName() {...})",
+    "Use sonner for toasts. Sonner component are located in /app/src/components/ui/sonner.tsx"
+  ]
+}
