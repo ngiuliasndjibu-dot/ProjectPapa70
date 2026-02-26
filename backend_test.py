@@ -363,6 +363,107 @@ class POSAPITester:
         
         return success1 and success2
 
+    def test_currencies_api(self):
+        """Test currency management - NEW FEATURE"""
+        print("\n=== TESTING CURRENCIES API (NEW FEATURE) ===")
+        
+        # Get all currencies
+        success1, response = self.run_test(
+            "Get All Currencies",
+            "GET",
+            "api/currencies",
+            200
+        )
+        
+        if success1:
+            print(f"   Found {len(response)} currencies")
+            
+            # Check for XOF currency (should be both reference and selling)
+            xof_currency = None
+            for currency in response:
+                if currency.get('code') == 'XOF':
+                    xof_currency = currency
+                    break
+            
+            if xof_currency:
+                print(f"   XOF Currency found:")
+                print(f"     - Is Reference: {xof_currency.get('is_reference')}")
+                print(f"     - Is Selling: {xof_currency.get('is_selling')}")
+                print(f"     - Exchange Rate: {xof_currency.get('exchange_rate')}")
+                
+                if not (xof_currency.get('is_reference') and xof_currency.get('is_selling')):
+                    print("   ⚠️  XOF should be both reference AND selling currency")
+            else:
+                print("   ❌ XOF currency not found")
+        
+        # Get active currencies
+        success2, response2 = self.run_test(
+            "Get Active Currencies",
+            "GET",
+            "api/currencies/active",
+            200
+        )
+        
+        if success2:
+            print(f"   Active currencies: Reference={response2.get('reference', {}).get('code')}, Selling={response2.get('selling', {}).get('code')}")
+        
+        return success1 and success2
+
+    def test_menu_families_api(self):
+        """Test menu families management - NEW FEATURE"""
+        print("\n=== TESTING MENU FAMILIES API (NEW FEATURE) ===")
+        
+        # Get all families
+        success1, response = self.run_test(
+            "Get All Menu Families",
+            "GET",
+            "api/menu/families",
+            200
+        )
+        
+        if success1:
+            print(f"   Found {len(response)} menu families")
+            family_names = [f.get('name') for f in response]
+            print(f"   Family names: {family_names}")
+            
+            # Check for required families
+            required_families = ['Cuisine', 'Bar']
+            for req_family in required_families:
+                if req_family in family_names:
+                    print(f"   ✅ Required family '{req_family}' found")
+                else:
+                    print(f"   ❌ Required family '{req_family}' missing")
+        
+        return success1
+
+    def test_menu_categories_api(self):
+        """Test menu categories management - NEW FEATURE"""
+        print("\n=== TESTING MENU CATEGORIES API (NEW FEATURE) ===")
+        
+        # Get all categories with full details
+        success1, response = self.run_test(
+            "Get All Menu Categories (Full)",
+            "GET",
+            "api/menu/categories-full",
+            200
+        )
+        
+        if success1:
+            print(f"   Found {len(response)} menu categories")
+            
+            # Check category structure
+            for category in response[:3]:  # Show first 3 categories
+                print(f"   Category: {category.get('name')}")
+                print(f"     - Family ID: {category.get('family_id')}")
+                print(f"     - Family Name: {category.get('family_name')}")
+                print(f"     - Display Order: {category.get('display_order')}")
+            
+            # Verify each category has family association
+            categories_with_family = [c for c in response if c.get('family_id') and c.get('family_name')]
+            print(f"   Categories with family association: {len(categories_with_family)}/{len(response)}")
+        
+        return success1
+
     def run_all_tests(self):
         """Run all API tests"""
         print("🚀 Starting POS API Tests")
