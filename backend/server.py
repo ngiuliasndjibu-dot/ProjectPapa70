@@ -1376,8 +1376,57 @@ async def seed_database():
     await db.users.delete_many({})
     await db.tables.delete_many({})
     await db.menu_items.delete_many({})
+    await db.menu_families.delete_many({})
+    await db.menu_categories.delete_many({})
+    await db.currencies.delete_many({})
     await db.printers.delete_many({})
     await db.counters.delete_many({})
+    
+    # Create currencies
+    currencies_data = [
+        {"code": "XOF", "name": "Franc CFA (BCEAO)", "symbol": "FCFA", "decimal_places": 0, "is_reference": True, "is_selling": True, "exchange_rate": 1.0},
+        {"code": "EUR", "name": "Euro", "symbol": "€", "decimal_places": 2, "is_reference": False, "is_selling": False, "exchange_rate": 0.00152},
+        {"code": "USD", "name": "Dollar US", "symbol": "$", "decimal_places": 2, "is_reference": False, "is_selling": False, "exchange_rate": 0.00165},
+        {"code": "XAF", "name": "Franc CFA (BEAC)", "symbol": "FCFA", "decimal_places": 0, "is_reference": False, "is_selling": False, "exchange_rate": 1.0},
+    ]
+    
+    for c_data in currencies_data:
+        currency = Currency(**c_data)
+        currency_dict = currency.model_dump()
+        currency_dict["created_at"] = currency_dict["created_at"].isoformat()
+        await db.currencies.insert_one(currency_dict)
+    
+    # Create menu families
+    families_data = [
+        {"id": "fam-cuisine", "name": "Cuisine", "description": "Plats préparés en cuisine", "display_order": 1},
+        {"id": "fam-bar", "name": "Bar", "description": "Boissons et cocktails", "display_order": 2},
+    ]
+    
+    for f_data in families_data:
+        family = MenuFamily(**f_data)
+        family_dict = family.model_dump()
+        family_dict["id"] = f_data["id"]
+        family_dict["created_at"] = family_dict["created_at"].isoformat()
+        await db.menu_families.insert_one(family_dict)
+    
+    # Create menu categories
+    categories_data = [
+        {"id": "cat-entrees", "name": "Entrées", "family_id": "fam-cuisine", "family_name": "Cuisine", "display_order": 1},
+        {"id": "cat-plats", "name": "Plats", "family_id": "fam-cuisine", "family_name": "Cuisine", "display_order": 2},
+        {"id": "cat-desserts", "name": "Desserts", "family_id": "fam-cuisine", "family_name": "Cuisine", "display_order": 3},
+        {"id": "cat-boissons", "name": "Boissons", "family_id": "fam-bar", "family_name": "Bar", "display_order": 1},
+        {"id": "cat-cocktails", "name": "Cocktails", "family_id": "fam-bar", "family_name": "Bar", "display_order": 2},
+        {"id": "cat-vins", "name": "Vins", "family_id": "fam-bar", "family_name": "Bar", "display_order": 3},
+        {"id": "cat-bieres", "name": "Bières", "family_id": "fam-bar", "family_name": "Bar", "display_order": 4},
+        {"id": "cat-shots", "name": "Shots", "family_id": "fam-bar", "family_name": "Bar", "display_order": 5},
+    ]
+    
+    for c_data in categories_data:
+        category = MenuCategory(**c_data)
+        category_dict = category.model_dump()
+        category_dict["id"] = c_data["id"]
+        category_dict["created_at"] = category_dict["created_at"].isoformat()
+        await db.menu_categories.insert_one(category_dict)
     
     # Create admin user
     admin = User(username="admin", full_name="Administrateur", role=UserRole.ADMIN)
@@ -1416,51 +1465,51 @@ async def seed_database():
         table_dict["created_at"] = table_dict["created_at"].isoformat()
         await db.tables.insert_one(table_dict)
     
-    # Create menu items
+    # Create menu items with family and category references
     menu_items_data = [
         # Entrées (Kitchen)
-        {"name": "Salade César", "description": "Laitue romaine, parmesan, croûtons, sauce César maison", "price": 8500, "category": "Entrées", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400"},
-        {"name": "Soupe du jour", "description": "Préparée avec des légumes frais de saison", "price": 5000, "category": "Entrées", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400"},
-        {"name": "Bruschetta", "description": "Pain grillé, tomates fraîches, basilic, huile d'olive", "price": 7000, "category": "Entrées", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1572695157366-5e585ab2b69f?w=400"},
+        {"name": "Salade César", "description": "Laitue romaine, parmesan, croûtons, sauce César maison", "price": 8500, "family_id": "fam-cuisine", "family_name": "Cuisine", "category_id": "cat-entrees", "category": "Entrées", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400"},
+        {"name": "Soupe du jour", "description": "Préparée avec des légumes frais de saison", "price": 5000, "family_id": "fam-cuisine", "family_name": "Cuisine", "category_id": "cat-entrees", "category": "Entrées", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400"},
+        {"name": "Bruschetta", "description": "Pain grillé, tomates fraîches, basilic, huile d'olive", "price": 7000, "family_id": "fam-cuisine", "family_name": "Cuisine", "category_id": "cat-entrees", "category": "Entrées", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1572695157366-5e585ab2b69f?w=400"},
         
         # Plats (Kitchen)
-        {"name": "Steak Frites", "description": "Entrecôte 300g, frites maison, sauce au poivre", "price": 22000, "category": "Plats", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1600891964092-4316c288032e?w=400"},
-        {"name": "Poulet Grillé", "description": "Poulet entier grillé aux herbes, légumes rôtis", "price": 18000, "category": "Plats", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=400"},
-        {"name": "Poisson du jour", "description": "Selon arrivage, accompagné de riz parfumé", "price": 20000, "category": "Plats", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400"},
-        {"name": "Burger Gourmet", "description": "Bœuf 200g, cheddar, bacon, oignons caramélisés", "price": 15000, "category": "Plats", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400"},
-        {"name": "Pâtes Carbonara", "description": "Spaghetti, guanciale, œuf, parmesan, poivre", "price": 14000, "category": "Plats", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400"},
+        {"name": "Steak Frites", "description": "Entrecôte 300g, frites maison, sauce au poivre", "price": 22000, "family_id": "fam-cuisine", "family_name": "Cuisine", "category_id": "cat-plats", "category": "Plats", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1600891964092-4316c288032e?w=400"},
+        {"name": "Poulet Grillé", "description": "Poulet entier grillé aux herbes, légumes rôtis", "price": 18000, "family_id": "fam-cuisine", "family_name": "Cuisine", "category_id": "cat-plats", "category": "Plats", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=400"},
+        {"name": "Poisson du jour", "description": "Selon arrivage, accompagné de riz parfumé", "price": 20000, "family_id": "fam-cuisine", "family_name": "Cuisine", "category_id": "cat-plats", "category": "Plats", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400"},
+        {"name": "Burger Gourmet", "description": "Bœuf 200g, cheddar, bacon, oignons caramélisés", "price": 15000, "family_id": "fam-cuisine", "family_name": "Cuisine", "category_id": "cat-plats", "category": "Plats", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400"},
+        {"name": "Pâtes Carbonara", "description": "Spaghetti, guanciale, œuf, parmesan, poivre", "price": 14000, "family_id": "fam-cuisine", "family_name": "Cuisine", "category_id": "cat-plats", "category": "Plats", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400"},
         
         # Desserts (Kitchen)
-        {"name": "Tiramisu", "description": "Recette traditionnelle au mascarpone et café", "price": 7500, "category": "Desserts", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=400"},
-        {"name": "Crème Brûlée", "description": "Vanille de Madagascar, sucre caramélisé", "price": 7000, "category": "Desserts", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1470324161839-ce2bb6fa6bc3?w=400"},
-        {"name": "Fondant Chocolat", "description": "Cœur coulant, glace vanille", "price": 8000, "category": "Desserts", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=400"},
+        {"name": "Tiramisu", "description": "Recette traditionnelle au mascarpone et café", "price": 7500, "family_id": "fam-cuisine", "family_name": "Cuisine", "category_id": "cat-desserts", "category": "Desserts", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=400"},
+        {"name": "Crème Brûlée", "description": "Vanille de Madagascar, sucre caramélisé", "price": 7000, "family_id": "fam-cuisine", "family_name": "Cuisine", "category_id": "cat-desserts", "category": "Desserts", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1470324161839-ce2bb6fa6bc3?w=400"},
+        {"name": "Fondant Chocolat", "description": "Cœur coulant, glace vanille", "price": 8000, "family_id": "fam-cuisine", "family_name": "Cuisine", "category_id": "cat-desserts", "category": "Desserts", "department": Department.KITCHEN, "image_url": "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=400"},
         
         # Boissons (Bar)
-        {"name": "Coca-Cola", "description": "33cl", "price": 2000, "category": "Boissons", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400"},
-        {"name": "Eau Minérale", "description": "50cl", "price": 1500, "category": "Boissons", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400"},
-        {"name": "Jus d'Orange", "description": "Pressé frais", "price": 3500, "category": "Boissons", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=400"},
-        {"name": "Café Espresso", "description": "Simple ou double", "price": 2000, "category": "Boissons", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?w=400", "variants": ["Simple", "Double"]},
-        {"name": "Thé", "description": "Vert, noir ou menthe", "price": 2500, "category": "Boissons", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1597318181409-cf64d0b5d8a2?w=400", "variants": ["Vert", "Noir", "Menthe"]},
+        {"name": "Coca-Cola", "description": "33cl", "price": 2000, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-boissons", "category": "Boissons", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400"},
+        {"name": "Eau Minérale", "description": "50cl", "price": 1500, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-boissons", "category": "Boissons", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400"},
+        {"name": "Jus d'Orange", "description": "Pressé frais", "price": 3500, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-boissons", "category": "Boissons", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=400"},
+        {"name": "Café Espresso", "description": "Simple ou double", "price": 2000, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-boissons", "category": "Boissons", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?w=400", "variants": ["Simple", "Double"]},
+        {"name": "Thé", "description": "Vert, noir ou menthe", "price": 2500, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-boissons", "category": "Boissons", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1597318181409-cf64d0b5d8a2?w=400", "variants": ["Vert", "Noir", "Menthe"]},
         
         # Cocktails (Bar)
-        {"name": "Mojito", "description": "Rhum, menthe fraîche, citron vert, sucre de canne", "price": 8000, "category": "Cocktails", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1551538827-9c037cb4f32a?w=400"},
-        {"name": "Margarita", "description": "Tequila, triple sec, citron vert", "price": 9000, "category": "Cocktails", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1556855810-ac404aa91e85?w=400"},
-        {"name": "Piña Colada", "description": "Rhum, lait de coco, ananas", "price": 8500, "category": "Cocktails", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1587223962930-cb7f31384c19?w=400"},
-        {"name": "Gin Tonic", "description": "Gin premium, tonic, citron", "price": 7500, "category": "Cocktails", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1551751299-1b51cab2694c?w=400"},
+        {"name": "Mojito", "description": "Rhum, menthe fraîche, citron vert, sucre de canne", "price": 8000, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-cocktails", "category": "Cocktails", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1551538827-9c037cb4f32a?w=400"},
+        {"name": "Margarita", "description": "Tequila, triple sec, citron vert", "price": 9000, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-cocktails", "category": "Cocktails", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1556855810-ac404aa91e85?w=400"},
+        {"name": "Piña Colada", "description": "Rhum, lait de coco, ananas", "price": 8500, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-cocktails", "category": "Cocktails", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1587223962930-cb7f31384c19?w=400"},
+        {"name": "Gin Tonic", "description": "Gin premium, tonic, citron", "price": 7500, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-cocktails", "category": "Cocktails", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1551751299-1b51cab2694c?w=400"},
         
         # Vins (Bar)
-        {"name": "Vin Rouge Maison", "description": "Verre 15cl", "price": 5000, "category": "Vins", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400"},
-        {"name": "Vin Blanc Maison", "description": "Verre 15cl", "price": 5000, "category": "Vins", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1558001373-7b93ee48ffa0?w=400"},
-        {"name": "Champagne", "description": "Coupe 12cl", "price": 12000, "category": "Vins", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1549918864-48ac978761a4?w=400"},
+        {"name": "Vin Rouge Maison", "description": "Verre 15cl", "price": 5000, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-vins", "category": "Vins", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400"},
+        {"name": "Vin Blanc Maison", "description": "Verre 15cl", "price": 5000, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-vins", "category": "Vins", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1558001373-7b93ee48ffa0?w=400"},
+        {"name": "Champagne", "description": "Coupe 12cl", "price": 12000, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-vins", "category": "Vins", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1549918864-48ac978761a4?w=400"},
         
         # Bières (Bar)
-        {"name": "Bière Blonde", "description": "33cl", "price": 3500, "category": "Bières", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400"},
-        {"name": "Bière Brune", "description": "33cl", "price": 4000, "category": "Bières", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=400"},
+        {"name": "Bière Blonde", "description": "33cl", "price": 3500, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-bieres", "category": "Bières", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400"},
+        {"name": "Bière Brune", "description": "33cl", "price": 4000, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-bieres", "category": "Bières", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=400"},
         
         # Shots (Bar)
-        {"name": "Tequila Shot", "description": "30ml", "price": 4000, "category": "Shots", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400"},
-        {"name": "Vodka Shot", "description": "30ml", "price": 3500, "category": "Shots", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=400"},
-        {"name": "Whisky Shot", "description": "30ml", "price": 5000, "category": "Shots", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=400"},
+        {"name": "Tequila Shot", "description": "30ml", "price": 4000, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-shots", "category": "Shots", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400"},
+        {"name": "Vodka Shot", "description": "30ml", "price": 3500, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-shots", "category": "Shots", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=400"},
+        {"name": "Whisky Shot", "description": "30ml", "price": 5000, "family_id": "fam-bar", "family_name": "Bar", "category_id": "cat-shots", "category": "Shots", "department": Department.BAR, "image_url": "https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=400"},
     ]
     
     for item_data in menu_items_data:
@@ -1484,7 +1533,13 @@ async def seed_database():
     # Initialize order counter
     await db.counters.insert_one({"name": "order_number", "value": 1000})
     
-    return {"message": "Database seeded successfully", "admin_credentials": {"username": "admin", "password": "admin123"}}
+    return {
+        "message": "Database seeded successfully", 
+        "admin_credentials": {"username": "admin", "password": "admin123"},
+        "currencies": ["XOF (Reference/Selling)", "EUR", "USD", "XAF"],
+        "families": ["Cuisine", "Bar"],
+        "categories": ["Entrées", "Plats", "Desserts", "Boissons", "Cocktails", "Vins", "Bières", "Shots"]
+    }
 
 # ============== MAIN ==============
 
