@@ -1,0 +1,68 @@
+# ===========================================
+# Lumière POS - Docker Compose pour déploiement hybride
+# ===========================================
+# Cette configuration permet de faire fonctionner le POS
+# en local avec synchronisation cloud automatique
+# ===========================================
+
+version: '3.8'
+
+services:
+  # Base de données MongoDB locale
+  mongodb:
+    image: mongo:6.0
+    container_name: lumiere_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=lumiere_pos
+    networks:
+      - lumiere_network
+
+  # Backend FastAPI
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lumiere_backend
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=lumiere_pos
+      - JWT_SECRET=your-secure-jwt-secret-change-this
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+      # URL du serveur cloud pour synchronisation (optionnel)
+      - CLOUD_SYNC_URL=${CLOUD_SYNC_URL:-}
+      - CLOUD_SYNC_API_KEY=${CLOUD_SYNC_API_KEY:-}
+    depends_on:
+      - mongodb
+    networks:
+      - lumiere_network
+
+  # Frontend React
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lumiere_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:8001
+    depends_on:
+      - backend
+    networks:
+      - lumiere_network
+
+volumes:
+  mongodb_data:
+
+networks:
+  lumiere_network:
+    driver: bridge
