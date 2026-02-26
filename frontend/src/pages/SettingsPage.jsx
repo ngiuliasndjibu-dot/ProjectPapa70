@@ -561,16 +561,6 @@ export default function SettingsPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
 
                 {/* Families Tab */}
                 <TabsContent value="families">
