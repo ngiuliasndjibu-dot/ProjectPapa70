@@ -608,6 +608,197 @@ async def delete_menu_item(item_id: str, current_user: dict = Depends(get_curren
         raise HTTPException(status_code=404, detail="Menu item not found")
     return {"message": "Menu item deleted"}
 
+# ============== MENU FAMILIES ROUTES ==============
+
+@api_router.get("/menu/families", response_model=List[dict])
+async def get_menu_families(current_user: dict = Depends(get_current_user)):
+    families = await db.menu_families.find({}, {"_id": 0}).sort("display_order", 1).to_list(100)
+    return [serialize_doc(f) for f in families]
+
+@api_router.post("/menu/families", response_model=dict)
+async def create_menu_family(family_data: MenuFamilyCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    family = MenuFamily(**family_data.model_dump())
+    family_dict = family.model_dump()
+    family_dict["created_at"] = family_dict["created_at"].isoformat()
+    await db.menu_families.insert_one(family_dict)
+    return serialize_doc(family_dict)
+
+@api_router.put("/menu/families/{family_id}", response_model=dict)
+async def update_menu_family(family_id: str, update_data: MenuFamilyUpdate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    result = await db.menu_families.update_one({"id": family_id}, {"$set": update_dict})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    # Update family_name in all related items and categories
+    if "name" in update_dict:
+        await db.menu_categories.update_many({"family_id": family_id}, {"$set": {"family_name": update_dict["name"]}})
+        await db.menu_items.update_many({"family_id": family_id}, {"$set": {"family_name": update_dict["name"]}})
+    
+    family = await db.menu_families.find_one({"id": family_id}, {"_id": 0})
+    return serialize_doc(family)
+
+@api_router.delete("/menu/families/{family_id}")
+async def delete_menu_family(family_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await db.menu_families.delete_one({"id": family_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Family not found")
+    return {"message": "Family deleted"}
+
+# ============== MENU CATEGORIES ROUTES ==============
+
+@api_router.get("/menu/categories-full", response_model=List[dict])
+async def get_menu_categories_full(current_user: dict = Depends(get_current_user)):
+    categories = await db.menu_categories.find({}, {"_id": 0}).sort("display_order", 1).to_list(100)
+    return [serialize_doc(c) for c in categories]
+
+@api_router.post("/menu/categories-full", response_model=dict)
+async def create_menu_category(category_data: MenuCategoryCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get family name
+    family = await db.menu_families.find_one({"id": category_data.family_id}, {"_id": 0})
+    if family:
+        category_data.family_name = family["name"]
+    
+    category = MenuCategory(**category_data.model_dump())
+    category_dict = category.model_dump()
+    category_dict["created_at"] = category_dict["created_at"].isoformat()
+    await db.menu_categories.insert_one(category_dict)
+    return serialize_doc(category_dict)
+
+@api_router.put("/menu/categories-full/{category_id}", response_model=dict)
+async def update_menu_category(category_id: str, update_data: MenuCategoryUpdate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    
+    # Update family_name if family_id changed
+    if "family_id" in update_dict:
+        family = await db.menu_families.find_one({"id": update_dict["family_id"]}, {"_id": 0})
+        if family:
+            update_dict["family_name"] = family["name"]
+    
+    result = await db.menu_categories.update_one({"id": category_id}, {"$set": update_dict})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    category = await db.menu_categories.find_one({"id": category_id}, {"_id": 0})
+    return serialize_doc(category)
+
+@api_router.delete("/menu/categories-full/{category_id}")
+async def delete_menu_category(category_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await db.menu_categories.delete_one({"id": category_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return {"message": "Category deleted"}
+
+# ============== CURRENCIES ROUTES ==============
+
+@api_router.get("/currencies", response_model=List[dict])
+async def get_currencies(current_user: dict = Depends(get_current_user)):
+    currencies = await db.currencies.find({}, {"_id": 0}).to_list(100)
+    return [serialize_doc(c) for c in currencies]
+
+@api_router.get("/currencies/active", response_model=dict)
+async def get_active_currencies(current_user: dict = Depends(get_current_user)):
+    reference = await db.currencies.find_one({"is_reference": True}, {"_id": 0})
+    selling = await db.currencies.find_one({"is_selling": True}, {"_id": 0})
+    return {
+        "reference": serialize_doc(reference) if reference else None,
+        "selling": serialize_doc(selling) if selling else None
+    }
+
+@api_router.post("/currencies", response_model=dict)
+async def create_currency(currency_data: CurrencyCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # If this is reference currency, unset others
+    if currency_data.is_reference:
+        await db.currencies.update_many({}, {"$set": {"is_reference": False}})
+    
+    # If this is selling currency, unset others
+    if currency_data.is_selling:
+        await db.currencies.update_many({}, {"$set": {"is_selling": False}})
+    
+    currency = Currency(**currency_data.model_dump())
+    currency_dict = currency.model_dump()
+    currency_dict["created_at"] = currency_dict["created_at"].isoformat()
+    await db.currencies.insert_one(currency_dict)
+    return serialize_doc(currency_dict)
+
+@api_router.put("/currencies/{currency_id}", response_model=dict)
+async def update_currency(currency_id: str, update_data: CurrencyUpdate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    
+    # If setting as reference, unset others
+    if update_dict.get("is_reference"):
+        await db.currencies.update_many({"id": {"$ne": currency_id}}, {"$set": {"is_reference": False}})
+    
+    # If setting as selling, unset others
+    if update_dict.get("is_selling"):
+        await db.currencies.update_many({"id": {"$ne": currency_id}}, {"$set": {"is_selling": False}})
+    
+    result = await db.currencies.update_one({"id": currency_id}, {"$set": update_dict})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    
+    currency = await db.currencies.find_one({"id": currency_id}, {"_id": 0})
+    return serialize_doc(currency)
+
+@api_router.delete("/currencies/{currency_id}")
+async def delete_currency(currency_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    currency = await db.currencies.find_one({"id": currency_id}, {"_id": 0})
+    if currency and (currency.get("is_reference") or currency.get("is_selling")):
+        raise HTTPException(status_code=400, detail="Cannot delete active reference or selling currency")
+    
+    result = await db.currencies.delete_one({"id": currency_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    return {"message": "Currency deleted"}
+
+@api_router.post("/currencies/convert", response_model=dict)
+async def convert_currency(amount: float, from_code: str, to_code: str, current_user: dict = Depends(get_current_user)):
+    """Convert amount from one currency to another"""
+    from_currency = await db.currencies.find_one({"code": from_code}, {"_id": 0})
+    to_currency = await db.currencies.find_one({"code": to_code}, {"_id": 0})
+    
+    if not from_currency or not to_currency:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    
+    # Convert to reference first, then to target
+    reference_amount = amount / from_currency["exchange_rate"]
+    target_amount = reference_amount * to_currency["exchange_rate"]
+    
+    return {
+        "from_amount": amount,
+        "from_currency": from_code,
+        "to_amount": round(target_amount, to_currency["decimal_places"]),
+        "to_currency": to_code,
+        "exchange_rate": to_currency["exchange_rate"] / from_currency["exchange_rate"]
+    }
+
 # ============== ORDERS ROUTES ==============
 
 async def get_next_order_number():
