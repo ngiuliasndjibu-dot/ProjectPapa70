@@ -406,14 +406,56 @@ export default function SettingsPage() {
 
                 {/* Currencies Tab */}
                 <TabsContent value="currencies">
+                    {/* Active Currency Summary */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <Card className={`border-2 ${currencies.some(c => c.is_reference) ? 'border-blue-200 bg-blue-50/50' : 'border-amber-200 bg-amber-50/50'}`}>
+                            <CardContent className="pt-6">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-xl ${currencies.some(c => c.is_reference) ? 'bg-blue-100' : 'bg-amber-100'} flex items-center justify-center`}>
+                                        <DollarSign className={`w-6 h-6 ${currencies.some(c => c.is_reference) ? 'text-blue-600' : 'text-amber-600'}`} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm text-stone-500 font-medium">Devise de référence</p>
+                                        {currencies.find(c => c.is_reference) ? (
+                                            <p className="text-xl font-bold">
+                                                {currencies.find(c => c.is_reference)?.code} - {currencies.find(c => c.is_reference)?.name}
+                                            </p>
+                                        ) : (
+                                            <p className="text-amber-600 font-medium">⚠️ Non définie - Cliquez sur une devise pour la définir</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card className={`border-2 ${currencies.some(c => c.is_selling) ? 'border-green-200 bg-green-50/50' : 'border-amber-200 bg-amber-50/50'}`}>
+                            <CardContent className="pt-6">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-xl ${currencies.some(c => c.is_selling) ? 'bg-green-100' : 'bg-amber-100'} flex items-center justify-center`}>
+                                        <DollarSign className={`w-6 h-6 ${currencies.some(c => c.is_selling) ? 'text-green-600' : 'text-amber-600'}`} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm text-stone-500 font-medium">Devise de vente</p>
+                                        {currencies.find(c => c.is_selling) ? (
+                                            <p className="text-xl font-bold">
+                                                {currencies.find(c => c.is_selling)?.code} - {currencies.find(c => c.is_selling)?.name}
+                                            </p>
+                                        ) : (
+                                            <p className="text-amber-600 font-medium">⚠️ Non définie - Cliquez sur une devise pour la définir</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
                     <Card className="border-stone-100 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
                                 <CardTitle style={{ fontFamily: 'Playfair Display, serif' }}>
-                                    Gestion des devises
+                                    Liste des devises
                                 </CardTitle>
                                 <p className="text-sm text-stone-500 mt-1">
-                                    Configurez la devise de référence et la devise de vente
+                                    Cliquez sur les boutons pour définir la devise de référence ou de vente
                                 </p>
                             </div>
                             <Button 
@@ -432,34 +474,45 @@ export default function SettingsPage() {
                                         <TableHead>Code</TableHead>
                                         <TableHead>Nom</TableHead>
                                         <TableHead>Symbole</TableHead>
-                                        <TableHead>Taux de change</TableHead>
-                                        <TableHead className="text-center">Référence</TableHead>
-                                        <TableHead className="text-center">Vente</TableHead>
+                                        <TableHead>Taux / USD</TableHead>
+                                        <TableHead className="text-center">Définir comme</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {currencies.map((currency) => (
-                                        <TableRow key={currency.id}>
+                                        <TableRow key={currency.id} className={currency.is_reference || currency.is_selling ? 'bg-stone-50' : ''}>
                                             <TableCell>
-                                                <span className="font-mono font-bold">{currency.code}</span>
+                                                <span className="font-mono font-bold text-lg">{currency.code}</span>
                                             </TableCell>
-                                            <TableCell>{currency.name}</TableCell>
                                             <TableCell>
-                                                <Badge variant="outline">{currency.symbol}</Badge>
+                                                <span className="font-medium">{currency.name}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className="text-base">{currency.symbol}</Badge>
                                             </TableCell>
                                             <TableCell className="font-mono">
                                                 {currency.exchange_rate}
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                {currency.is_reference && (
-                                                    <Badge className="bg-blue-100 text-blue-800">Oui</Badge>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                {currency.is_selling && (
-                                                    <Badge className="bg-green-100 text-green-800">Oui</Badge>
-                                                )}
+                                                <div className="flex justify-center gap-2">
+                                                    <Button
+                                                        variant={currency.is_reference ? "default" : "outline"}
+                                                        size="sm"
+                                                        onClick={() => setAsReference(currency)}
+                                                        className={currency.is_reference ? "bg-blue-600 hover:bg-blue-700" : "border-blue-300 text-blue-600 hover:bg-blue-50"}
+                                                    >
+                                                        {currency.is_reference ? "✓ Référence" : "Référence"}
+                                                    </Button>
+                                                    <Button
+                                                        variant={currency.is_selling ? "default" : "outline"}
+                                                        size="sm"
+                                                        onClick={() => setAsSelling(currency)}
+                                                        className={currency.is_selling ? "bg-green-600 hover:bg-green-700" : "border-green-300 text-green-600 hover:bg-green-50"}
+                                                    >
+                                                        {currency.is_selling ? "✓ Vente" : "Vente"}
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
@@ -478,6 +531,16 @@ export default function SettingsPage() {
                                                         disabled={currency.is_reference || currency.is_selling}
                                                     >
                                                         <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
                                                     </Button>
                                                 </div>
                                             </TableCell>
