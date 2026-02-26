@@ -143,8 +143,8 @@ export default function DashboardPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="h-[300px]">
-                            <ResponsiveContainer width="100%" height="100%">
+                        <div style={{ width: '100%', height: 300 }}>
+                            <ResponsiveContainer width="100%" height={300}>
                                 <AreaChart data={hourlySales}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E4" />
                                     <XAxis 
@@ -184,8 +184,8 @@ export default function DashboardPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="h-[200px]">
-                            <ResponsiveContainer width="100%" height="100%">
+                        <div style={{ width: '100%', height: 200 }}>
+                            <ResponsiveContainer width="100%" height={200}>
                                 <PieChart>
                                     <Pie
                                         data={pieData}
