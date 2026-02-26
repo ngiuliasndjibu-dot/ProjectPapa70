@@ -198,8 +198,10 @@ function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
-                <AppRoutes />
-                <Toaster position="top-right" richColors />
+                <OfflineProvider>
+                    <AppRoutes />
+                    <Toaster position="top-right" richColors />
+                </OfflineProvider>
             </AuthProvider>
         </BrowserRouter>
     );
