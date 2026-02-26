@@ -204,7 +204,11 @@ class Table(TableBase):
 class MenuItemBase(BaseModel):
     name: str
     description: str
-    price: float
+    price: float  # Prix en devise de référence
+    price_selling: Optional[float] = None  # Prix en devise de vente (si différent)
+    family_id: Optional[str] = None
+    family_name: str = ""
+    category_id: Optional[str] = None
     category: str
     department: Department
     image_url: Optional[str] = None
@@ -218,6 +222,10 @@ class MenuItemUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     price: Optional[float] = None
+    price_selling: Optional[float] = None
+    family_id: Optional[str] = None
+    family_name: Optional[str] = None
+    category_id: Optional[str] = None
     category: Optional[str] = None
     department: Optional[Department] = None
     image_url: Optional[str] = None
