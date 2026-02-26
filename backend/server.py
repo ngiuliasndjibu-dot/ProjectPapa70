@@ -242,7 +242,8 @@ class OrderItemBase(BaseModel):
     menu_item_id: str
     menu_item_name: str
     quantity: int
-    unit_price: float
+    unit_price: float  # Prix en devise de référence
+    unit_price_selling: Optional[float] = None  # Prix en devise de vente
     notes: str = ""
     department: Department
 
@@ -258,12 +259,14 @@ class OrderBase(BaseModel):
     server_name: str
     items: List[OrderItem] = []
     notes: str = ""
+    currency_code: str = "XOF"  # Devise utilisée pour cette commande
 
 class OrderCreate(BaseModel):
     table_id: str
     table_number: int
     items: List[OrderItemBase]
     notes: str = ""
+    currency_code: str = "XOF"
 
 class OrderUpdate(BaseModel):
     items: Optional[List[OrderItemBase]] = None
@@ -275,7 +278,8 @@ class Order(OrderBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     order_number: int = 0
     status: OrderStatus = OrderStatus.PENDING
-    total: float = 0.0
+    total: float = 0.0  # Total en devise de référence
+    total_selling: float = 0.0  # Total en devise de vente
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
