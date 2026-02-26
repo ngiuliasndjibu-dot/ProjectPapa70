@@ -84,6 +84,11 @@ export const Sidebar = () => {
 
             {/* User section */}
             <div className="p-3 lg:p-4 border-t border-stone-800">
+                {/* Connection status */}
+                <div className="mb-3">
+                    <ConnectionStatusCompact />
+                </div>
+                
                 <div className="flex items-center gap-3 px-3 py-2 mb-2">
                     <div className="w-8 h-8 rounded-full bg-stone-700 flex items-center justify-center flex-shrink-0">
                         <User className="w-4 h-4 text-stone-300" />
