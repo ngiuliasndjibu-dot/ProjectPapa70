@@ -58,9 +58,28 @@ export const tablesAPI = {
 export const menuAPI = {
     getAll: () => api.get('/menu'),
     getCategories: () => api.get('/menu/categories'),
+    getFamilies: () => api.get('/menu/families'),
+    getCategoriesFull: () => api.get('/menu/categories-full'),
     create: (data) => api.post('/menu', data),
     update: (id, data) => api.put(`/menu/${id}`, data),
     delete: (id) => api.delete(`/menu/${id}`),
+    createFamily: (data) => api.post('/menu/families', data),
+    updateFamily: (id, data) => api.put(`/menu/families/${id}`, data),
+    deleteFamily: (id) => api.delete(`/menu/families/${id}`),
+    createCategory: (data) => api.post('/menu/categories-full', data),
+    updateCategory: (id, data) => api.put(`/menu/categories-full/${id}`, data),
+    deleteCategory: (id) => api.delete(`/menu/categories-full/${id}`),
+};
+
+// Currency API
+export const currencyAPI = {
+    getAll: () => api.get('/currencies'),
+    getActive: () => api.get('/currencies/active'),
+    create: (data) => api.post('/currencies', data),
+    update: (id, data) => api.put(`/currencies/${id}`, data),
+    delete: (id) => api.delete(`/currencies/${id}`),
+    convert: (amount, from_code, to_code) => 
+        api.post('/currencies/convert', null, { params: { amount, from_code, to_code } }),
 };
 
 // Orders API
