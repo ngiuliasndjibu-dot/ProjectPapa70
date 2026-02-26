@@ -1382,12 +1382,19 @@ async def seed_database():
     await db.printers.delete_many({})
     await db.counters.delete_many({})
     
-    # Create currencies
+    # Create currencies - Aucune devise n'est définie par défaut comme référence ou vente
+    # L'utilisateur doit choisir sa devise de référence et de vente
     currencies_data = [
-        {"code": "XOF", "name": "Franc CFA (BCEAO)", "symbol": "FCFA", "decimal_places": 0, "is_reference": True, "is_selling": True, "exchange_rate": 1.0},
-        {"code": "EUR", "name": "Euro", "symbol": "€", "decimal_places": 2, "is_reference": False, "is_selling": False, "exchange_rate": 0.00152},
-        {"code": "USD", "name": "Dollar US", "symbol": "$", "decimal_places": 2, "is_reference": False, "is_selling": False, "exchange_rate": 0.00165},
-        {"code": "XAF", "name": "Franc CFA (BEAC)", "symbol": "FCFA", "decimal_places": 0, "is_reference": False, "is_selling": False, "exchange_rate": 1.0},
+        {"code": "USD", "name": "Dollar américain", "symbol": "$", "decimal_places": 2, "is_reference": False, "is_selling": False, "exchange_rate": 1.0},
+        {"code": "EUR", "name": "Euro", "symbol": "€", "decimal_places": 2, "is_reference": False, "is_selling": False, "exchange_rate": 0.92},
+        {"code": "XOF", "name": "Franc CFA (BCEAO)", "symbol": "FCFA", "decimal_places": 0, "is_reference": False, "is_selling": False, "exchange_rate": 605.0},
+        {"code": "XAF", "name": "Franc CFA (BEAC)", "symbol": "FCFA", "decimal_places": 0, "is_reference": False, "is_selling": False, "exchange_rate": 605.0},
+        {"code": "CDF", "name": "Franc congolais", "symbol": "FC", "decimal_places": 2, "is_reference": False, "is_selling": False, "exchange_rate": 2750.0},
+        {"code": "GNF", "name": "Franc guinéen", "symbol": "GNF", "decimal_places": 0, "is_reference": False, "is_selling": False, "exchange_rate": 8600.0},
+        {"code": "MAD", "name": "Dirham marocain", "symbol": "DH", "decimal_places": 2, "is_reference": False, "is_selling": False, "exchange_rate": 10.0},
+        {"code": "TND", "name": "Dinar tunisien", "symbol": "DT", "decimal_places": 3, "is_reference": False, "is_selling": False, "exchange_rate": 3.1},
+        {"code": "NGN", "name": "Naira nigérian", "symbol": "₦", "decimal_places": 2, "is_reference": False, "is_selling": False, "exchange_rate": 1550.0},
+        {"code": "GBP", "name": "Livre sterling", "symbol": "£", "decimal_places": 2, "is_reference": False, "is_selling": False, "exchange_rate": 0.79},
     ]
     
     for c_data in currencies_data:
