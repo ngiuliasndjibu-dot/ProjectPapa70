@@ -71,6 +71,81 @@ class PrinterStatus(str, Enum):
     ONLINE = "online"
     OFFLINE = "offline"
 
+# ============== CURRENCY & GROUPING MODELS ==============
+
+# Currency Models
+class CurrencyBase(BaseModel):
+    code: str  # ISO code: USD, EUR, XOF, XAF, etc.
+    name: str
+    symbol: str
+    decimal_places: int = 0
+    is_reference: bool = False  # Devise de référence
+    is_selling: bool = False    # Devise de vente
+    exchange_rate: float = 1.0  # Taux par rapport à la devise de référence
+
+class CurrencyCreate(CurrencyBase):
+    pass
+
+class CurrencyUpdate(BaseModel):
+    code: Optional[str] = None
+    name: Optional[str] = None
+    symbol: Optional[str] = None
+    decimal_places: Optional[int] = None
+    is_reference: Optional[bool] = None
+    is_selling: Optional[bool] = None
+    exchange_rate: Optional[float] = None
+
+class Currency(CurrencyBase):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Menu Family/Group Models (for hierarchical grouping)
+class MenuFamilyBase(BaseModel):
+    name: str
+    description: str = ""
+    display_order: int = 0
+    is_active: bool = True
+
+class MenuFamilyCreate(MenuFamilyBase):
+    pass
+
+class MenuFamilyUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    display_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+class MenuFamily(MenuFamilyBase):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Menu Category (belongs to a family)
+class MenuCategoryBase(BaseModel):
+    name: str
+    family_id: str
+    family_name: str = ""
+    description: str = ""
+    display_order: int = 0
+    is_active: bool = True
+
+class MenuCategoryCreate(MenuCategoryBase):
+    pass
+
+class MenuCategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    family_id: Optional[str] = None
+    family_name: Optional[str] = None
+    description: Optional[str] = None
+    display_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+class MenuCategory(MenuCategoryBase):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # ============== MODELS ==============
 
 # User Models
