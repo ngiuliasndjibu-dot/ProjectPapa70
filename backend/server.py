@@ -286,7 +286,9 @@ class Order(OrderBase):
 # Payment Models
 class PaymentBase(BaseModel):
     order_id: str
-    amount: float
+    amount: float  # Montant en devise de référence
+    amount_selling: Optional[float] = None  # Montant en devise de vente
+    currency_code: str = "XOF"  # Devise utilisée pour ce paiement
     method: PaymentMethod
     is_partial: bool = False
 
