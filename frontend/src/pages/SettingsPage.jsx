@@ -257,6 +257,26 @@ export default function SettingsPage() {
         }
     };
 
+    const setAsReference = async (currency) => {
+        try {
+            await currencyAPI.update(currency.id, { is_reference: true });
+            toast.success(`${currency.code} définie comme devise de référence`);
+            loadData();
+        } catch (err) {
+            toast.error('Erreur lors de la mise à jour');
+        }
+    };
+
+    const setAsSelling = async (currency) => {
+        try {
+            await currencyAPI.update(currency.id, { is_selling: true });
+            toast.success(`${currency.code} définie comme devise de vente`);
+            loadData();
+        } catch (err) {
+            toast.error('Erreur lors de la mise à jour');
+        }
+    };
+
     // Family handlers
     const openCreateFamilyDialog = () => {
         setEditingFamily(null);
