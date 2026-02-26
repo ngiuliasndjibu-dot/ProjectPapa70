@@ -474,6 +474,9 @@ class POSAPITester:
         tests = [
             ("Database Seeding", self.test_seed_database),
             ("Authentication", self.test_authentication),
+            ("Currencies API (NEW)", self.test_currencies_api),
+            ("Menu Families API (NEW)", self.test_menu_families_api),
+            ("Menu Categories API (NEW)", self.test_menu_categories_api),
             ("Tables API", self.test_tables_api),
             ("Menu API", self.test_menu_api),
             ("Orders API", self.test_orders_api),
