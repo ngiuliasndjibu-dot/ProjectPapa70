@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
+import { ConnectionStatusCompact } from '../offline/ConnectionStatus';
 import {
     LayoutDashboard,
     Grid3X3,
