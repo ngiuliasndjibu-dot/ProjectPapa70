@@ -438,7 +438,7 @@ export default function POSPage() {
     );
 }
 
-function CartItem({ item, onUpdateQuantity, onRemove, onAddNote }) {
+function CartItem({ item, onUpdateQuantity, onRemove, onAddNote, formatPrice }) {
     return (
         <div className="flex items-start gap-3 py-3 border-b border-stone-100 last:border-0 animate-fade-in">
             <div className="flex-1">
