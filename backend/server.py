@@ -523,8 +523,14 @@ async def update_user(user_id: str, update_data: dict, current_user: dict = Depe
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    update_data.pop("password", None)
+    # Don't allow changing id
     update_data.pop("id", None)
+    
+    # Handle password change separately
+    if "password" in update_data and update_data["password"]:
+        update_data["password"] = hash_password(update_data["password"])
+    else:
+        update_data.pop("password", None)
     
     result = await db.users.update_one({"id": user_id}, {"$set": update_data})
     if result.matched_count == 0:
@@ -532,6 +538,201 @@ async def update_user(user_id: str, update_data: dict, current_user: dict = Depe
     
     user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
     return user
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Prevent deleting yourself
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    result = await db.users.delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "User deleted successfully"}
+
+@api_router.put("/users/{user_id}/toggle-status")
+async def toggle_user_status(user_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Prevent disabling yourself
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot disable your own account")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    new_status = not user.get("is_active", True)
+    await db.users.update_one({"id": user_id}, {"$set": {"is_active": new_status}})
+    
+    return {"message": f"User {'activated' if new_status else 'deactivated'}", "is_active": new_status}
+
+@api_router.post("/users", response_model=dict)
+async def create_user(user_data: UserCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new user (admin only)"""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    existing = await db.users.find_one({"username": user_data.username})
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    user = User(
+        username=user_data.username,
+        full_name=user_data.full_name,
+        role=user_data.role
+    )
+    user_dict = user.model_dump()
+    user_dict["password"] = hash_password(user_data.password)
+    user_dict["is_active"] = True
+    user_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.users.insert_one(user_dict)
+    
+    # Return user without password
+    user_dict.pop("password", None)
+    user_dict.pop("_id", None)
+    return user_dict
+
+# Role permissions definition
+ROLE_PERMISSIONS = {
+    UserRole.ADMIN: {
+        "name": "Administrateur",
+        "description": "Accès total au système",
+        "permissions": [
+            "dashboard.view", "dashboard.stats",
+            "tables.view", "tables.create", "tables.edit", "tables.delete",
+            "menu.view", "menu.create", "menu.edit", "menu.delete",
+            "orders.view", "orders.create", "orders.edit", "orders.cancel",
+            "payments.view", "payments.create", "payments.daily_close",
+            "stock.view", "stock.create", "stock.edit",
+            "bottles.view", "bottles.create", "bottles.edit", "bottles.pour",
+            "printers.view", "printers.create", "printers.edit", "printers.delete",
+            "users.view", "users.create", "users.edit", "users.delete",
+            "settings.view", "settings.edit",
+            "reports.view", "reports.print"
+        ]
+    },
+    UserRole.CASHIER: {
+        "name": "Caissier",
+        "description": "Gestion des paiements et clôture de caisse",
+        "permissions": [
+            "dashboard.view", "dashboard.stats",
+            "tables.view",
+            "menu.view",
+            "orders.view", "orders.create",
+            "payments.view", "payments.create", "payments.daily_close",
+            "reports.view"
+        ]
+    },
+    UserRole.SERVER: {
+        "name": "Serveur",
+        "description": "Prise de commandes et gestion des tables",
+        "permissions": [
+            "tables.view", "tables.edit",
+            "menu.view",
+            "orders.view", "orders.create", "orders.edit"
+        ]
+    },
+    UserRole.BARTENDER: {
+        "name": "Barman",
+        "description": "Gestion du bar et des boissons",
+        "permissions": [
+            "menu.view",
+            "orders.view",
+            "bottles.view", "bottles.pour"
+        ]
+    },
+    UserRole.KITCHEN: {
+        "name": "Cuisine",
+        "description": "Affichage des commandes cuisine",
+        "permissions": [
+            "orders.view"
+        ]
+    }
+}
+
+@api_router.get("/roles")
+async def get_roles(current_user: dict = Depends(get_current_user)):
+    """Get all roles with their permissions"""
+    roles = []
+    for role, info in ROLE_PERMISSIONS.items():
+        roles.append({
+            "code": role.value,
+            "name": info["name"],
+            "description": info["description"],
+            "permissions": info["permissions"]
+        })
+    return roles
+
+@api_router.get("/permissions")
+async def get_all_permissions(current_user: dict = Depends(get_current_user)):
+    """Get all available permissions grouped by module"""
+    return {
+        "dashboard": [
+            {"code": "dashboard.view", "name": "Voir le tableau de bord"},
+            {"code": "dashboard.stats", "name": "Voir les statistiques"}
+        ],
+        "tables": [
+            {"code": "tables.view", "name": "Voir les tables"},
+            {"code": "tables.create", "name": "Créer des tables"},
+            {"code": "tables.edit", "name": "Modifier les tables"},
+            {"code": "tables.delete", "name": "Supprimer des tables"}
+        ],
+        "menu": [
+            {"code": "menu.view", "name": "Voir le menu"},
+            {"code": "menu.create", "name": "Créer des articles"},
+            {"code": "menu.edit", "name": "Modifier des articles"},
+            {"code": "menu.delete", "name": "Supprimer des articles"}
+        ],
+        "orders": [
+            {"code": "orders.view", "name": "Voir les commandes"},
+            {"code": "orders.create", "name": "Créer des commandes"},
+            {"code": "orders.edit", "name": "Modifier des commandes"},
+            {"code": "orders.cancel", "name": "Annuler des commandes"}
+        ],
+        "payments": [
+            {"code": "payments.view", "name": "Voir les paiements"},
+            {"code": "payments.create", "name": "Enregistrer des paiements"},
+            {"code": "payments.daily_close", "name": "Clôture de caisse"}
+        ],
+        "stock": [
+            {"code": "stock.view", "name": "Voir le stock"},
+            {"code": "stock.create", "name": "Ajouter au stock"},
+            {"code": "stock.edit", "name": "Modifier le stock"}
+        ],
+        "bottles": [
+            {"code": "bottles.view", "name": "Voir les bouteilles"},
+            {"code": "bottles.create", "name": "Ajouter des bouteilles"},
+            {"code": "bottles.edit", "name": "Modifier des bouteilles"},
+            {"code": "bottles.pour", "name": "Enregistrer les services"}
+        ],
+        "printers": [
+            {"code": "printers.view", "name": "Voir les imprimantes"},
+            {"code": "printers.create", "name": "Ajouter des imprimantes"},
+            {"code": "printers.edit", "name": "Modifier les imprimantes"},
+            {"code": "printers.delete", "name": "Supprimer des imprimantes"}
+        ],
+        "users": [
+            {"code": "users.view", "name": "Voir les utilisateurs"},
+            {"code": "users.create", "name": "Créer des utilisateurs"},
+            {"code": "users.edit", "name": "Modifier des utilisateurs"},
+            {"code": "users.delete", "name": "Supprimer des utilisateurs"}
+        ],
+        "settings": [
+            {"code": "settings.view", "name": "Voir les paramètres"},
+            {"code": "settings.edit", "name": "Modifier les paramètres"}
+        ],
+        "reports": [
+            {"code": "reports.view", "name": "Voir les rapports"},
+            {"code": "reports.print", "name": "Imprimer les rapports"}
+        ]
+    }
 
 # ============== TABLES ROUTES ==============
 
