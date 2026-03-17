@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { menuAPI, ordersAPI, tablesAPI } from '../lib/api';
-import { cn, formatPrice, getDepartmentLabel } from '../lib/utils';
+import { cn, getDepartmentLabel } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
