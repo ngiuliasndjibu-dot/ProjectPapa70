@@ -130,7 +130,7 @@ export default function BottlesPage() {
 
     const lowStockBottles = bottles.filter(b => b.quantity_in_stock <= b.alert_threshold);
 
-    if (loading) {
+    if (loading || currencyLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
