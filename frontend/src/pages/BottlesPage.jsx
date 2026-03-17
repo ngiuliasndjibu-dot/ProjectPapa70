@@ -340,7 +340,7 @@ export default function BottlesPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="purchase_price">Prix d'achat (FCFA)</Label>
+                                <Label htmlFor="purchase_price">Prix d'achat ({sellingCurrency?.symbol || 'FCFA'})</Label>
                                 <Input
                                     id="purchase_price"
                                     type="number"
