@@ -52,8 +52,10 @@ export const CurrencyProvider = ({ children }) => {
         if (!referenceCurrency || !sellingCurrency) return priceInReference;
         if (referenceCurrency.code === sellingCurrency.code) return priceInReference;
         
-        // Price in reference * selling rate / reference rate
-        return priceInReference * (sellingCurrency.exchange_rate / referenceCurrency.exchange_rate);
+        // Convert: priceInReference / reference_rate * selling_rate
+        // If reference is USD (rate=1) and selling is CDF (rate=2750)
+        // Price 10 USD = 10 / 1 * 2750 = 27500 CDF
+        return priceInReference * sellingCurrency.exchange_rate / referenceCurrency.exchange_rate;
     }, [referenceCurrency, sellingCurrency]);
 
     // Convert price from selling to reference currency
@@ -61,7 +63,7 @@ export const CurrencyProvider = ({ children }) => {
         if (!referenceCurrency || !sellingCurrency) return priceInSelling;
         if (referenceCurrency.code === sellingCurrency.code) return priceInSelling;
         
-        return priceInSelling * (referenceCurrency.exchange_rate / sellingCurrency.exchange_rate);
+        return priceInSelling * referenceCurrency.exchange_rate / sellingCurrency.exchange_rate;
     }, [referenceCurrency, sellingCurrency]);
 
     // Convert between any two currencies
@@ -73,12 +75,11 @@ export const CurrencyProvider = ({ children }) => {
         
         if (!fromCurrency || !toCurrency) return amount;
         
-        // Convert to reference first, then to target
-        const inReference = amount / fromCurrency.exchange_rate;
-        return inReference * toCurrency.exchange_rate;
+        // Convert via reference rate
+        return amount * toCurrency.exchange_rate / fromCurrency.exchange_rate;
     }, [currencies]);
 
-    // Format price with currency symbol
+    // Format price with currency symbol (for display in any currency)
     const formatPrice = useCallback((amount, currency = null) => {
         const curr = currency || sellingCurrency || referenceCurrency;
         if (!curr) {
@@ -98,27 +99,37 @@ export const CurrencyProvider = ({ children }) => {
         return formatPrice(amount, referenceCurrency);
     }, [formatPrice, referenceCurrency]);
 
-    // Format price in selling currency (converts from reference)
-    const formatPriceSelling = useCallback((amountInReference) => {
-        const converted = convertToSelling(amountInReference);
-        return formatPrice(converted, sellingCurrency);
-    }, [convertToSelling, formatPrice, sellingCurrency]);
+    // Format price in selling currency (prices are already stored in selling currency)
+    // No conversion needed - just format with the selling currency symbol
+    const formatPriceSelling = useCallback((amount) => {
+        return formatPrice(amount, sellingCurrency);
+    }, [formatPrice, sellingCurrency]);
 
-    // Get display price (in selling currency from reference amount)
-    const getDisplayPrice = useCallback((priceInReference) => {
-        return convertToSelling(priceInReference);
-    }, [convertToSelling]);
+    // Get display price - prices are already in selling currency, no conversion needed
+    const getDisplayPrice = useCallback((price) => {
+        return price;
+    }, []);
 
-    // Get price for payment (convert if needed)
-    const getPriceForPayment = useCallback((priceInReference, paymentCurrency) => {
-        if (!paymentCurrency) return priceInReference;
+    // Convert price for payment in a different currency
+    // If paying in reference currency, need to convert from selling price
+    const getPriceForPayment = useCallback((priceInSelling, paymentCurrency) => {
+        if (!paymentCurrency || !sellingCurrency) return priceInSelling;
         
-        if (paymentCurrency.code === referenceCurrency?.code) {
-            return priceInReference;
+        if (paymentCurrency.code === sellingCurrency.code) {
+            return priceInSelling;
         }
         
-        return convert(priceInReference, referenceCurrency?.code, paymentCurrency.code);
-    }, [convert, referenceCurrency]);
+        // Convert from selling to payment currency
+        return convert(priceInSelling, sellingCurrency.code, paymentCurrency.code);
+    }, [convert, sellingCurrency]);
+
+    // Convert from selling currency to reference currency for storage
+    const convertSellingToReference = useCallback((priceInSelling) => {
+        if (!referenceCurrency || !sellingCurrency) return priceInSelling;
+        if (referenceCurrency.code === sellingCurrency.code) return priceInSelling;
+        
+        return priceInSelling * referenceCurrency.exchange_rate / sellingCurrency.exchange_rate;
+    }, [referenceCurrency, sellingCurrency]);
 
     const value = {
         currencies,
@@ -130,6 +141,7 @@ export const CurrencyProvider = ({ children }) => {
         loadCurrencies,
         convertToSelling,
         convertToReference,
+        convertSellingToReference,
         convert,
         formatPrice,
         formatPriceReference,
