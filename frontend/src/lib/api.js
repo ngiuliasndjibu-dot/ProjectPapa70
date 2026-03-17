@@ -87,7 +87,16 @@ export const authAPI = {
 // Users API
 export const usersAPI = {
     getAll: () => api.get('/users'),
+    create: (data) => api.post('/users', data),
     update: (id, data) => api.put(`/users/${id}`, data),
+    delete: (id) => api.delete(`/users/${id}`),
+    toggleStatus: (id) => api.put(`/users/${id}/toggle-status`),
+};
+
+// Roles API
+export const rolesAPI = {
+    getAll: () => api.get('/roles'),
+    getPermissions: () => api.get('/permissions'),
 };
 
 // Tables API - with offline support
