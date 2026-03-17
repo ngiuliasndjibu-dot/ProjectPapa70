@@ -368,6 +368,9 @@ export const reportsAPI = {
     printDailyClose: (printerId) => api.post('/reports/daily-close/print', null, { 
         params: printerId ? { printer_id: printerId } : {} 
     }),
+    getDailySales: (date) => api.get('/reports/daily-sales', { params: date ? { date } : {} }),
+    getPeriodSales: (startDate, endDate) => api.get('/reports/period-sales', { params: { start_date: startDate, end_date: endDate } }),
+    getStock: () => api.get('/reports/stock'),
 };
 
 // Order printing
@@ -375,6 +378,68 @@ export const orderPrintAPI = {
     printReceipt: (orderId, printerId) => api.post(`/orders/${orderId}/print-receipt`, null, {
         params: printerId ? { printer_id: printerId } : {}
     }),
+    closeTable: (orderId, paymentMethod, loyaltyCustomerId) => api.post(`/orders/${orderId}/close-table`, null, {
+        params: { payment_method: paymentMethod, loyalty_customer_id: loyaltyCustomerId || undefined }
+    }),
+};
+
+// Order merge/split
+export const orderSplitMergeAPI = {
+    merge: (orderIds, targetTableId) => api.post('/orders/merge', { order_ids: orderIds, target_table_id: targetTableId }),
+    split: (orderId, splitType, splitData) => api.post(`/orders/${orderId}/split`, { split_type: splitType, split_data: splitData }),
+};
+
+// Restaurant Settings API
+export const restaurantSettingsAPI = {
+    get: () => api.get('/settings/restaurant'),
+    update: (data) => api.put('/settings/restaurant', data),
+};
+
+// Reservations API
+export const reservationsAPI = {
+    getAll: (date, status) => api.get('/reservations', { params: { date, status } }),
+    create: (data) => api.post('/reservations', data),
+    update: (id, data) => api.put(`/reservations/${id}`, data),
+    delete: (id) => api.delete(`/reservations/${id}`),
+    updateStatus: (id, status) => api.put(`/reservations/${id}/status`, null, { params: { status } }),
+};
+
+// Loyalty API
+export const loyaltyAPI = {
+    getSettings: () => api.get('/loyalty/settings'),
+    updateSettings: (data) => api.put('/loyalty/settings', data),
+    getCustomers: (search) => api.get('/loyalty/customers', { params: search ? { search } : {} }),
+    createCustomer: (data) => api.post('/loyalty/customers', data),
+    getCustomer: (id) => api.get(`/loyalty/customers/${id}`),
+    getCustomerByPhone: (phone) => api.get(`/loyalty/customers/phone/${phone}`),
+    addPoints: (customerId, amount, orderId) => api.post(`/loyalty/customers/${customerId}/add-points`, null, { params: { amount, order_id: orderId } }),
+    redeemPoints: (customerId, points, rewardId) => api.post(`/loyalty/customers/${customerId}/redeem`, null, { params: { points, reward_id: rewardId } }),
+    getRewards: () => api.get('/loyalty/rewards'),
+    createReward: (data) => api.post('/loyalty/rewards', data),
+    deleteReward: (id) => api.delete(`/loyalty/rewards/${id}`),
+};
+
+// Ingredients API
+export const ingredientsAPI = {
+    getAll: () => api.get('/ingredients'),
+    create: (data) => api.post('/ingredients', data),
+    update: (id, data) => api.put(`/ingredients/${id}`, data),
+    delete: (id) => api.delete(`/ingredients/${id}`),
+    adjustStock: (id, quantityChange, reason) => api.post(`/ingredients/${id}/adjust-stock`, null, { params: { quantity_change: quantityChange, reason } }),
+};
+
+// Recipes API
+export const recipesAPI = {
+    getAll: () => api.get('/recipes'),
+    getByMenuItem: (menuItemId) => api.get(`/recipes/menu-item/${menuItemId}`),
+    create: (data) => api.post('/recipes', data),
+    delete: (id) => api.delete(`/recipes/${id}`),
+};
+
+// Invoices API
+export const invoicesAPI = {
+    get: (id) => api.get(`/invoices/${id}`),
+    getByOrder: (orderId) => api.get(`/invoices/order/${orderId}`),
 };
 
 export default api;
