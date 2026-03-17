@@ -45,9 +45,10 @@ Application complète de gestion de restaurant POS (Point of Sale) avec séparat
 ### Session 2024-12-17
 ✅ **Système multi-devises complet**
    - Prix affichés dans la devise de vente (FC - Franc Congolais)
+   - Équivalent en devise de référence (USD) affiché entre parenthèses
    - Paiement possible dans les deux devises (référence USD + vente FC)
    - CurrencyContext charge les devises après authentification
-   - Conversion automatique entre devises
+   - Toutes les pages mises à jour : Dashboard, POS, Paiements, Menu, Bouteilles
 
 ✅ **Gestion complète des utilisateurs**
    - Page de gestion des utilisateurs (/users)
