@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { bottlesAPI } from '../lib/api';
-import { formatPrice } from '../lib/utils';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -40,6 +40,8 @@ export default function BottlesPage() {
         alert_threshold: 2,
         shot_size_ml: 30,
     });
+    
+    const { formatPriceSelling, sellingCurrency, referenceCurrency, convertSellingToReference, formatPrice, loading: currencyLoading } = useCurrency();
 
     useEffect(() => {
         loadData();
