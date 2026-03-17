@@ -43,6 +43,7 @@ export default function POSPage() {
     const [noteItemId, setNoteItemId] = useState(null);
     const [itemNote, setItemNote] = useState('');
     const { user } = useAuth();
+    const { sellingCurrency, referenceCurrency, formatPriceSelling, getDisplayPrice, loading: currencyLoading } = useCurrency();
 
     useEffect(() => {
         loadData();
