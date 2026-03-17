@@ -316,6 +316,7 @@ export default function POSPage() {
                                                     onUpdateQuantity={updateQuantity}
                                                     onRemove={removeFromCart}
                                                     onAddNote={openNoteDialog}
+                                                    formatPrice={formatPriceSelling}
                                                 />
                                             ))}
                                         </div>
