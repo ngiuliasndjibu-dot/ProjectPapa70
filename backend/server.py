@@ -414,6 +414,130 @@ class DashboardStats(BaseModel):
     stock_alerts: List[Dict[str, Any]]
     bottle_alerts: List[Dict[str, Any]]
 
+# ============== RESTAURANT SETTINGS MODELS ==============
+
+class RestaurantSettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default="restaurant_settings")
+    name: str = "Mon Restaurant"
+    address: str = ""
+    city: str = ""
+    phone: str = ""
+    email: str = ""
+    website: str = ""
+    tax_id: str = ""  # NIF/RCCM
+    logo_url: str = ""
+    receipt_footer: str = "Merci de votre visite!"
+    currency_symbol: str = "FC"
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# ============== RESERVATION MODELS ==============
+
+class ReservationStatus(str, Enum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    CANCELLED = "cancelled"
+    COMPLETED = "completed"
+    NO_SHOW = "no_show"
+
+class ReservationCreate(BaseModel):
+    customer_name: str
+    customer_phone: str
+    customer_email: str = ""
+    table_id: str
+    date: str  # YYYY-MM-DD
+    time: str  # HH:MM
+    party_size: int
+    notes: str = ""
+
+class Reservation(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    customer_name: str
+    customer_phone: str
+    customer_email: str = ""
+    table_id: str
+    table_number: int = 0
+    date: str
+    time: str
+    party_size: int
+    notes: str = ""
+    status: ReservationStatus = ReservationStatus.PENDING
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# ============== LOYALTY PROGRAM MODELS ==============
+
+class LoyaltyCustomer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    phone: str
+    email: str = ""
+    points: int = 0
+    total_spent: float = 0
+    visit_count: int = 0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_visit: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LoyaltyTransaction(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    customer_id: str
+    order_id: str = ""
+    points_earned: int = 0
+    points_spent: int = 0
+    amount: float = 0
+    description: str = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LoyaltyReward(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str = ""
+    points_required: int
+    reward_type: str = "discount"  # discount, free_item, percentage
+    reward_value: float = 0  # Amount or percentage
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LoyaltySettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default="loyalty_settings")
+    is_enabled: bool = True
+    points_per_unit: int = 1  # 1 point per X currency units spent
+    currency_per_point: float = 100  # Spend 100 FC = 1 point
+    welcome_bonus: int = 10  # Points for new customers
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# ============== RECIPE/INGREDIENT MODELS ==============
+
+class Ingredient(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    unit: str  # kg, g, l, ml, piece
+    quantity_in_stock: float = 0
+    cost_per_unit: float = 0
+    alert_threshold: float = 10
+    supplier: str = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class RecipeItem(BaseModel):
+    ingredient_id: str
+    ingredient_name: str = ""
+    quantity: float
+    unit: str
+
+class Recipe(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    menu_item_id: str
+    menu_item_name: str = ""
+    ingredients: List[RecipeItem] = []
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # ============== HELPERS ==============
 
 def hash_password(password: str) -> str:
