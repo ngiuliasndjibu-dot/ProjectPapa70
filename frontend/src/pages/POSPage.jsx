@@ -359,7 +359,7 @@ export default function POSPage() {
                         <div className="flex justify-between items-center mb-4">
                             <span className="text-lg font-semibold">Total</span>
                             <span className="text-2xl font-bold text-primary">
-                                {formatPrice(cartTotal)}
+                                {formatPriceSelling(cartTotal)}
                             </span>
                         </div>
                         <Button 
