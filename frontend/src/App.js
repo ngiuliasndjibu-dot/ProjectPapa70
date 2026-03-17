@@ -19,6 +19,7 @@ import BottlesPage from './pages/BottlesPage';
 import PaymentsPage from './pages/PaymentsPage';
 import SettingsPage from './pages/SettingsPage';
 import PrintersPage from './pages/PrintersPage';
+import UsersPage from './pages/UsersPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
