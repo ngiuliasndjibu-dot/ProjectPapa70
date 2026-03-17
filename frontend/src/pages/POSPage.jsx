@@ -272,7 +272,7 @@ export default function POSPage() {
                                             )}
                                         </div>
                                         <p className="text-primary font-bold">
-                                            {formatPrice(item.price)}
+                                            {formatPriceSelling(item.price)}
                                         </p>
                                     </div>
                                 </button>
