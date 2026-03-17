@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { dashboardAPI } from '../lib/api';
-import { formatPrice } from '../lib/utils';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { 
@@ -20,6 +20,15 @@ export default function DashboardPage() {
     const [stats, setStats] = useState(null);
     const [hourlySales, setHourlySales] = useState([]);
     const [loading, setLoading] = useState(true);
+    
+    const { 
+        sellingCurrency, 
+        referenceCurrency, 
+        formatPriceSelling,
+        convertSellingToReference,
+        formatPrice,
+        loading: currencyLoading 
+    } = useCurrency();
 
     useEffect(() => {
         loadData();
@@ -42,7 +51,36 @@ export default function DashboardPage() {
         }
     };
 
-    if (loading) {
+    // Format price with both currencies
+    const formatDualCurrency = (amount) => {
+        const sellingFormatted = formatPriceSelling(amount);
+        
+        // Show reference currency equivalent if different
+        if (referenceCurrency && sellingCurrency && referenceCurrency.code !== sellingCurrency.code) {
+            const refAmount = convertSellingToReference(amount);
+            const refFormatted = formatPrice(refAmount, referenceCurrency);
+            return (
+                <span>
+                    {sellingFormatted}
+                    <span className="text-sm text-stone-400 ml-1">({refFormatted})</span>
+                </span>
+            );
+        }
+        return sellingFormatted;
+    };
+
+    // Format for tooltip (single line)
+    const formatTooltipValue = (value) => {
+        const selling = formatPriceSelling(value);
+        if (referenceCurrency && sellingCurrency && referenceCurrency.code !== sellingCurrency.code) {
+            const refAmount = convertSellingToReference(value);
+            const ref = formatPrice(refAmount, referenceCurrency);
+            return `${selling} (${ref})`;
+        }
+        return selling;
+    };
+
+    if (loading || currencyLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -62,7 +100,14 @@ export default function DashboardPage() {
                 <h1 className="text-3xl lg:text-4xl font-bold" style={{ fontFamily: 'Playfair Display, serif' }}>
                     Tableau de bord
                 </h1>
-                <p className="text-stone-500 mt-1">Vue d'ensemble de votre activité</p>
+                <p className="text-stone-500 mt-1">
+                    Vue d'ensemble de votre activité
+                    {sellingCurrency && referenceCurrency && sellingCurrency.code !== referenceCurrency.code && (
+                        <span className="ml-2 text-xs">
+                            (Devise: {sellingCurrency.symbol} / Réf: {referenceCurrency.symbol})
+                        </span>
+                    )}
+                </p>
             </div>
 
             {/* Stats Cards */}
@@ -73,7 +118,7 @@ export default function DashboardPage() {
                             <div>
                                 <p className="text-sm text-stone-500 font-medium">Chiffre du jour</p>
                                 <p className="text-2xl lg:text-3xl font-bold text-stone-900 mt-1">
-                                    {formatPrice(stats?.daily_revenue || 0)}
+                                    {formatDualCurrency(stats?.daily_revenue || 0)}
                                 </p>
                             </div>
                             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -105,7 +150,7 @@ export default function DashboardPage() {
                             <div>
                                 <p className="text-sm text-stone-500 font-medium">Ventes Cuisine</p>
                                 <p className="text-2xl lg:text-3xl font-bold text-stone-900 mt-1">
-                                    {formatPrice(stats?.kitchen_sales || 0)}
+                                    {formatDualCurrency(stats?.kitchen_sales || 0)}
                                 </p>
                             </div>
                             <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center">
@@ -121,7 +166,7 @@ export default function DashboardPage() {
                             <div>
                                 <p className="text-sm text-stone-500 font-medium">Ventes Bar</p>
                                 <p className="text-2xl lg:text-3xl font-bold text-stone-900 mt-1">
-                                    {formatPrice(stats?.bar_sales || 0)}
+                                    {formatDualCurrency(stats?.bar_sales || 0)}
                                 </p>
                             </div>
                             <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
@@ -159,7 +204,7 @@ export default function DashboardPage() {
                                         fontSize={12}
                                     />
                                     <Tooltip 
-                                        formatter={(value) => [formatPrice(value), 'Ventes']}
+                                        formatter={(value) => [formatTooltipValue(value), 'Ventes']}
                                         labelFormatter={(h) => `${h}h00`}
                                     />
                                     <Area 
@@ -200,7 +245,7 @@ export default function DashboardPage() {
                                             <Cell key={`cell-${index}`} fill={entry.color} />
                                         ))}
                                     </Pie>
-                                    <Tooltip formatter={(value) => formatPrice(value)} />
+                                    <Tooltip formatter={(value) => formatTooltipValue(value)} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -239,7 +284,7 @@ export default function DashboardPage() {
                                         <span className="font-medium text-stone-800">{item.name}</span>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-semibold text-stone-900">{formatPrice(item.revenue)}</p>
+                                        <p className="font-semibold text-stone-900">{formatDualCurrency(item.revenue)}</p>
                                         <p className="text-xs text-stone-500">{item.quantity} vendus</p>
                                     </div>
                                 </div>
