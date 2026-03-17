@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { menuAPI } from '../lib/api';
-import { formatPrice, getDepartmentLabel } from '../lib/utils';
+import { getDepartmentLabel } from '../lib/utils';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -39,6 +40,8 @@ export default function MenuPage() {
         image_url: '',
         is_active: true,
     });
+    
+    const { formatPriceSelling, sellingCurrency, referenceCurrency, convertSellingToReference, formatPrice, loading: currencyLoading } = useCurrency();
 
     const categories = ['Entrées', 'Plats', 'Desserts', 'Boissons', 'Cocktails', 'Vins', 'Bières', 'Shots'];
 
