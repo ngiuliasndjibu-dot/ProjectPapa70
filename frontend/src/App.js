@@ -186,6 +186,14 @@ function AppRoutes() {
                         </ProtectedRoute>
                     } 
                 />
+                <Route 
+                    path="/printers" 
+                    element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                            <PrintersPage />
+                        </ProtectedRoute>
+                    } 
+                />
             </Route>
 
             {/* Default redirect */}
