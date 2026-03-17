@@ -49,6 +49,14 @@ Application complète de gestion de restaurant POS (Point of Sale) avec séparat
    - CurrencyContext charge les devises après authentification
    - Conversion automatique entre devises
 
+✅ **Gestion complète des utilisateurs**
+   - Page de gestion des utilisateurs (/users)
+   - CRUD complet : création, modification, suppression
+   - Activation/désactivation des comptes
+   - 5 rôles prédéfinis avec permissions détaillées
+   - Onglet "Rôles & Privilèges" avec visualisation complète
+   - API: POST/PUT/DELETE /api/users, GET /api/roles, GET /api/permissions
+
 ### Session 2024-12-16
 ✅ Guide d'installation Windows complet (Docker + Manuel)
 ✅ Service d'impression ESC/POS pour imprimantes thermiques
