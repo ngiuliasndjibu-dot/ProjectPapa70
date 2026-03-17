@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { currencyAPI } from '../lib/api';
+import { useAuth } from './AuthContext';
 
 const CurrencyContext = createContext(null);
 
@@ -17,14 +18,20 @@ export const CurrencyProvider = ({ children }) => {
     const [sellingCurrency, setSellingCurrency] = useState(null);
     const [selectedPaymentCurrency, setSelectedPaymentCurrency] = useState(null);
     const [loading, setLoading] = useState(true);
+    const { isAuthenticated } = useAuth();
 
-    // Load currencies on mount
+    // Load currencies when authenticated
     useEffect(() => {
-        loadCurrencies();
-    }, []);
+        if (isAuthenticated) {
+            loadCurrencies();
+        } else {
+            setLoading(false);
+        }
+    }, [isAuthenticated]);
 
     const loadCurrencies = async () => {
         try {
+            setLoading(true);
             const [allRes, activeRes] = await Promise.all([
                 currencyAPI.getAll(),
                 currencyAPI.getActive()
