@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ordersAPI, paymentsAPI } from '../lib/api';
-import { formatPrice, formatDate, getStatusLabel, getOrderStatusBadge } from '../lib/utils';
+import { formatDate, getStatusLabel, getOrderStatusBadge } from '../lib/utils';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -18,7 +19,8 @@ import {
     Search,
     Receipt,
     DollarSign,
-    CheckCircle
+    CheckCircle,
+    ArrowRightLeft
 } from 'lucide-react';
 
 export default function PaymentsPage() {
@@ -31,9 +33,24 @@ export default function PaymentsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [paymentData, setPaymentData] = useState({
         amount: 0,
+        amountInCurrency: 0,
         method: 'cash',
         is_partial: false,
+        currency: null
     });
+
+    const { 
+        referenceCurrency, 
+        sellingCurrency, 
+        paymentCurrencies,
+        formatPrice,
+        formatPriceSelling,
+        formatPriceReference,
+        convertToSelling,
+        convertToReference,
+        getPriceForPayment,
+        loading: currencyLoading 
+    } = useCurrency();
 
     useEffect(() => {
         loadData();
@@ -57,25 +74,75 @@ export default function PaymentsPage() {
     };
 
     const openPaymentDialog = (order) => {
-        // Calculate remaining amount
+        // Calculate remaining amount (in reference currency)
         const orderPayments = payments.filter(p => p.order_id === order.id);
         const paidAmount = orderPayments.reduce((sum, p) => sum + p.amount, 0);
         const remaining = order.total - paidAmount;
         
+        // Default to selling currency
+        const defaultCurrency = sellingCurrency || referenceCurrency;
+        const amountInCurrency = defaultCurrency?.code === referenceCurrency?.code 
+            ? remaining 
+            : convertToSelling(remaining);
+        
         setSelectedOrder(order);
         setPaymentData({
-            amount: remaining,
+            amount: remaining, // Always store reference amount
+            amountInCurrency: amountInCurrency,
             method: 'cash',
             is_partial: false,
+            currency: defaultCurrency
         });
         setIsPaymentDialogOpen(true);
+    };
+
+    const handleCurrencyChange = (currencyCode) => {
+        const currency = paymentCurrencies.find(c => c.code === currencyCode);
+        if (!currency) return;
+
+        const orderPayments = payments.filter(p => p.order_id === selectedOrder.id);
+        const paidAmount = orderPayments.reduce((sum, p) => sum + p.amount, 0);
+        const remaining = selectedOrder.total - paidAmount;
+
+        // Convert remaining to selected currency
+        const amountInCurrency = currency.code === referenceCurrency?.code 
+            ? remaining 
+            : getPriceForPayment(remaining, currency);
+
+        setPaymentData(prev => ({
+            ...prev,
+            currency,
+            amountInCurrency
+        }));
+    };
+
+    const handleAmountChange = (value) => {
+        const amountInCurrency = parseFloat(value) || 0;
+        
+        // Convert back to reference currency for storage
+        const amountInReference = paymentData.currency?.code === referenceCurrency?.code
+            ? amountInCurrency
+            : convertToReference(amountInCurrency);
+
+        const orderPayments = payments.filter(p => p.order_id === selectedOrder.id);
+        const paidAmount = orderPayments.reduce((sum, p) => sum + p.amount, 0);
+        const remaining = selectedOrder.total - paidAmount;
+
+        setPaymentData(prev => ({
+            ...prev,
+            amountInCurrency,
+            amount: amountInReference,
+            is_partial: amountInReference < remaining
+        }));
     };
 
     const handlePayment = async () => {
         try {
             await paymentsAPI.create({
                 order_id: selectedOrder.id,
-                amount: paymentData.amount,
+                amount: paymentData.amount, // Amount in reference currency
+                amount_selling: paymentData.amountInCurrency,
+                currency_code: paymentData.currency?.code || referenceCurrency?.code,
                 method: paymentData.method,
                 is_partial: paymentData.is_partial,
             });
@@ -121,7 +188,7 @@ export default function PaymentsPage() {
         }
     };
 
-    if (loading) {
+    if (loading || currencyLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -137,7 +204,14 @@ export default function PaymentsPage() {
                     <h1 className="text-3xl lg:text-4xl font-bold" style={{ fontFamily: 'Playfair Display, serif' }}>
                         Paiements
                     </h1>
-                    <p className="text-stone-500 mt-1">{pendingOrders.length} commande(s) en attente de paiement</p>
+                    <p className="text-stone-500 mt-1">
+                        {pendingOrders.length} commande(s) en attente de paiement
+                        {sellingCurrency && referenceCurrency && sellingCurrency.code !== referenceCurrency.code && (
+                            <span className="ml-2 text-xs text-primary">
+                                (Affichage en {sellingCurrency.symbol})
+                            </span>
+                        )}
+                    </p>
                 </div>
             </div>
 
@@ -151,7 +225,7 @@ export default function PaymentsPage() {
                             </div>
                             <div>
                                 <p className="text-sm text-stone-500">Total du jour</p>
-                                <p className="text-2xl font-bold">{formatPrice(dailyClose?.total || 0)}</p>
+                                <p className="text-2xl font-bold">{formatPriceSelling(dailyClose?.total || 0)}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -164,7 +238,7 @@ export default function PaymentsPage() {
                             </div>
                             <div>
                                 <p className="text-sm text-stone-500">Espèces</p>
-                                <p className="text-2xl font-bold">{formatPrice(dailyClose?.by_method?.cash || 0)}</p>
+                                <p className="text-2xl font-bold">{formatPriceSelling(dailyClose?.by_method?.cash || 0)}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -177,7 +251,7 @@ export default function PaymentsPage() {
                             </div>
                             <div>
                                 <p className="text-sm text-stone-500">Carte</p>
-                                <p className="text-2xl font-bold">{formatPrice(dailyClose?.by_method?.card || 0)}</p>
+                                <p className="text-2xl font-bold">{formatPriceSelling(dailyClose?.by_method?.card || 0)}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -190,7 +264,7 @@ export default function PaymentsPage() {
                             </div>
                             <div>
                                 <p className="text-sm text-stone-500">Mobile Money</p>
-                                <p className="text-2xl font-bold">{formatPrice(dailyClose?.by_method?.mobile_money || 0)}</p>
+                                <p className="text-2xl font-bold">{formatPriceSelling(dailyClose?.by_method?.mobile_money || 0)}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -244,13 +318,13 @@ export default function PaymentsPage() {
                                             {formatDate(order.created_at)}
                                         </TableCell>
                                         <TableCell className="text-right font-medium">
-                                            {formatPrice(order.total)}
+                                            {formatPriceSelling(order.total)}
                                         </TableCell>
                                         <TableCell className="text-right text-green-600">
-                                            {formatPrice(paidAmount)}
+                                            {formatPriceSelling(paidAmount)}
                                         </TableCell>
                                         <TableCell className="text-right text-amber-600 font-medium">
-                                            {formatPrice(remaining)}
+                                            {formatPriceSelling(remaining)}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <Button
@@ -315,7 +389,7 @@ export default function PaymentsPage() {
                                     </TableCell>
                                     <TableCell>{payment.cashier_name}</TableCell>
                                     <TableCell className="text-right font-medium text-green-600">
-                                        {formatPrice(payment.amount)}
+                                        {formatPriceSelling(payment.amount)}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -333,9 +407,42 @@ export default function PaymentsPage() {
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
+                        {/* Currency Selection */}
+                        {paymentCurrencies.length > 1 && (
+                            <div className="space-y-2">
+                                <Label className="flex items-center gap-2">
+                                    <ArrowRightLeft className="w-4 h-4" />
+                                    Devise de paiement
+                                </Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {paymentCurrencies.map(currency => (
+                                        <Button
+                                            key={currency.code}
+                                            variant={paymentData.currency?.code === currency.code ? 'default' : 'outline'}
+                                            onClick={() => handleCurrencyChange(currency.code)}
+                                            className="h-12"
+                                        >
+                                            <span className="font-bold mr-2">{currency.symbol}</span>
+                                            {currency.code}
+                                            {currency.is_reference && (
+                                                <Badge variant="secondary" className="ml-2 text-xs">Réf</Badge>
+                                            )}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div className="text-center p-4 bg-stone-50 rounded-lg">
                             <p className="text-sm text-stone-500">Montant à payer</p>
-                            <p className="text-3xl font-bold text-primary">{formatPrice(paymentData.amount)}</p>
+                            <p className="text-3xl font-bold text-primary">
+                                {formatPrice(paymentData.amountInCurrency, paymentData.currency)}
+                            </p>
+                            {paymentData.currency?.code !== referenceCurrency?.code && (
+                                <p className="text-xs text-stone-400 mt-1">
+                                    ≈ {formatPriceReference(paymentData.amount)} (réf.)
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -369,17 +476,20 @@ export default function PaymentsPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="amount">Montant reçu</Label>
+                            <Label htmlFor="amount">
+                                Montant reçu ({paymentData.currency?.symbol || 'FCFA'})
+                            </Label>
                             <Input
                                 id="amount"
                                 type="number"
-                                value={paymentData.amount}
-                                onChange={(e) => setPaymentData(prev => ({ 
-                                    ...prev, 
-                                    amount: parseFloat(e.target.value),
-                                    is_partial: parseFloat(e.target.value) < (selectedOrder?.total || 0) - getOrderPaidAmount(selectedOrder?.id || '')
-                                }))}
+                                value={paymentData.amountInCurrency}
+                                onChange={(e) => handleAmountChange(e.target.value)}
                             />
+                            {paymentData.is_partial && (
+                                <p className="text-xs text-amber-600">
+                                    Paiement partiel - Un solde restera sur cette commande
+                                </p>
+                            )}
                         </div>
                     </div>
                     <DialogFooter>
@@ -389,9 +499,9 @@ export default function PaymentsPage() {
                         <Button 
                             onClick={handlePayment} 
                             className="rounded-full px-6"
-                            disabled={paymentData.amount <= 0}
+                            disabled={paymentData.amountInCurrency <= 0}
                         >
-                            Encaisser {formatPrice(paymentData.amount)}
+                            Encaisser {formatPrice(paymentData.amountInCurrency, paymentData.currency)}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
