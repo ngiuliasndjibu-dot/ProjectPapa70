@@ -196,6 +196,14 @@ function AppRoutes() {
                         </ProtectedRoute>
                     } 
                 />
+                <Route 
+                    path="/users" 
+                    element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                            <UsersPage />
+                        </ProtectedRoute>
+                    } 
+                />
             </Route>
 
             {/* Default redirect */}
