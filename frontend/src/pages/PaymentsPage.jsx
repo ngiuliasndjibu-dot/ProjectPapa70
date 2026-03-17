@@ -445,9 +445,9 @@ export default function PaymentsPage() {
                             <p className="text-3xl font-bold text-primary">
                                 {formatPrice(paymentData.amountInCurrency, paymentData.currency)}
                             </p>
-                            {paymentData.currency?.code !== referenceCurrency?.code && (
+                            {paymentData.currency?.code !== sellingCurrency?.code && (
                                 <p className="text-xs text-stone-400 mt-1">
-                                    ≈ {formatPriceReference(paymentData.amount)} (réf.)
+                                    ≈ {formatPriceSelling(paymentData.amount)} (vente)
                                 </p>
                             )}
                         </div>
