@@ -574,6 +574,118 @@ class PrinterService:
         receipt.cut()
         
         return receipt.build()
+    
+    def create_invoice(
+        self,
+        invoice_number: str,
+        order_number: int,
+        table_number: int,
+        server_name: str,
+        cashier_name: str,
+        items: List[Dict[str, Any]],
+        subtotal: float,
+        total: float,
+        currency_symbol: str = "FC",
+        payment_method: str = "cash",
+        restaurant_name: str = "LUMIÈRE RESTAURANT",
+        restaurant_address: str = "",
+        restaurant_city: str = "",
+        restaurant_phone: str = "",
+        restaurant_email: str = "",
+        tax_id: str = "",
+        receipt_footer: str = "Merci de votre visite!",
+        customer_name: str = "",
+        paper_width: int = 48
+    ) -> bytes:
+        """Create a complete invoice/receipt for thermal printer"""
+        receipt = ReceiptBuilder(paper_width=paper_width)
+        
+        now = datetime.now()
+        
+        # Header with restaurant info
+        receipt.center()
+        receipt.double_size_line(restaurant_name)
+        if restaurant_address:
+            receipt.line(restaurant_address)
+        if restaurant_city:
+            receipt.line(restaurant_city)
+        if restaurant_phone:
+            receipt.line(f"Tel: {restaurant_phone}")
+        if restaurant_email:
+            receipt.line(f"Email: {restaurant_email}")
+        if tax_id:
+            receipt.line(f"NIF/RCCM: {tax_id}")
+        receipt.separator('=')
+        
+        # Invoice number prominently
+        receipt.center()
+        receipt.bold_line(f"FACTURE N° {invoice_number}")
+        receipt.separator()
+        
+        # Order details
+        receipt.left()
+        receipt.row("Date:", now.strftime('%d/%m/%Y'))
+        receipt.row("Heure:", now.strftime('%H:%M:%S'))
+        receipt.row("Table:", str(table_number))
+        receipt.row("Serveur:", server_name)
+        receipt.row("Caissier:", cashier_name)
+        if customer_name:
+            receipt.row("Client:", customer_name)
+        receipt.separator()
+        
+        # Items header
+        receipt.bold_line("ARTICLES")
+        receipt.separator('-')
+        
+        # Items
+        for item in items:
+            qty = item.get('quantity', 1)
+            name = item.get('menu_item_name', 'Article')
+            unit_price = item.get('unit_price', 0)
+            line_total = qty * unit_price
+            
+            # Item name on one line
+            receipt.line(f"{qty}x {name}")
+            # Price on next line, right-aligned
+            receipt.right()
+            receipt.line(f"{int(unit_price):,} x {qty} = {int(line_total):,}".replace(',', ' '))
+            receipt.left()
+        
+        # Totals section
+        receipt.separator('=')
+        receipt.row("Sous-total:", f"{int(subtotal):,} {currency_symbol}".replace(',', ' '))
+        receipt.separator('-')
+        
+        # Grand total
+        receipt.content.extend(ESC.DOUBLE_HEIGHT_ON)
+        receipt.row("TOTAL:", f"{int(total):,} {currency_symbol}".replace(',', ' '))
+        receipt.content.extend(ESC.NORMAL_SIZE)
+        receipt.separator('=')
+        
+        # Payment info
+        payment_labels = {
+            'cash': 'Espèces',
+            'card': 'Carte bancaire',
+            'mobile_money': 'Mobile Money'
+        }
+        receipt.row("Mode de paiement:", payment_labels.get(payment_method, payment_method))
+        receipt.row("Montant reçu:", f"{int(total):,} {currency_symbol}".replace(',', ' '))
+        receipt.row("Rendu:", f"0 {currency_symbol}")
+        
+        # Footer
+        receipt.separator()
+        receipt.center()
+        receipt.newline()
+        receipt.line(receipt_footer)
+        receipt.newline()
+        receipt.line("Conservez ce ticket comme preuve d'achat")
+        receipt.newline(2)
+        receipt.line(now.strftime('%d/%m/%Y %H:%M:%S'))
+        
+        # Cut
+        receipt.cut()
+        
+        return receipt.build()
 
 
 # Singleton instance
