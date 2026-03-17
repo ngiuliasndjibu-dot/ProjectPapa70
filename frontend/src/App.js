@@ -209,8 +209,10 @@ function App() {
         <BrowserRouter>
             <AuthProvider>
                 <OfflineProvider>
-                    <AppRoutes />
-                    <Toaster position="top-right" richColors />
+                    <CurrencyProvider>
+                        <AppRoutes />
+                        <Toaster position="top-right" richColors />
+                    </CurrencyProvider>
                 </OfflineProvider>
             </AuthProvider>
         </BrowserRouter>
