@@ -178,7 +178,7 @@ export default function POSPage() {
         setTableSelectOpen(false);
     };
 
-    if (loading) {
+    if (loading || currencyLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
