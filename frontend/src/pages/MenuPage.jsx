@@ -236,7 +236,14 @@ export default function MenuPage() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right font-medium">
-                                        {formatPrice(item.price)}
+                                        <div>
+                                            <span>{formatPriceSelling(item.price)}</span>
+                                            {referenceCurrency && sellingCurrency && referenceCurrency.code !== sellingCurrency.code && (
+                                                <span className="text-xs text-stone-400 ml-1">
+                                                    ({formatPrice(convertSellingToReference(item.price), referenceCurrency)})
+                                                </span>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-center">
                                         <Switch 
