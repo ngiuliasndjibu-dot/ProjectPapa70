@@ -74,20 +74,22 @@ export default function PaymentsPage() {
     };
 
     const openPaymentDialog = (order) => {
-        // Calculate remaining amount (in reference currency)
+        // Calculate remaining amount (in selling currency - prices are stored in selling currency)
         const orderPayments = payments.filter(p => p.order_id === order.id);
         const paidAmount = orderPayments.reduce((sum, p) => sum + p.amount, 0);
         const remaining = order.total - paidAmount;
         
         // Default to selling currency
         const defaultCurrency = sellingCurrency || referenceCurrency;
+        
+        // If paying in reference currency, convert the amount
         const amountInCurrency = defaultCurrency?.code === referenceCurrency?.code 
-            ? remaining 
-            : convertToSelling(remaining);
+            ? getPriceForPayment(remaining, referenceCurrency)
+            : remaining;
         
         setSelectedOrder(order);
         setPaymentData({
-            amount: remaining, // Always store reference amount
+            amount: remaining, // Store in selling currency
             amountInCurrency: amountInCurrency,
             method: 'cash',
             is_partial: false,
@@ -105,7 +107,7 @@ export default function PaymentsPage() {
         const remaining = selectedOrder.total - paidAmount;
 
         // Convert remaining to selected currency
-        const amountInCurrency = currency.code === referenceCurrency?.code 
+        const amountInCurrency = currency.code === sellingCurrency?.code 
             ? remaining 
             : getPriceForPayment(remaining, currency);
 
@@ -119,10 +121,14 @@ export default function PaymentsPage() {
     const handleAmountChange = (value) => {
         const amountInCurrency = parseFloat(value) || 0;
         
-        // Convert back to reference currency for storage
-        const amountInReference = paymentData.currency?.code === referenceCurrency?.code
-            ? amountInCurrency
-            : convertToReference(amountInCurrency);
+        // Convert back to selling currency for storage
+        let amountInSelling;
+        if (paymentData.currency?.code === sellingCurrency?.code) {
+            amountInSelling = amountInCurrency;
+        } else {
+            // Convert from payment currency to selling currency
+            amountInSelling = convert(amountInCurrency, paymentData.currency?.code, sellingCurrency?.code);
+        }
 
         const orderPayments = payments.filter(p => p.order_id === selectedOrder.id);
         const paidAmount = orderPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -131,8 +137,8 @@ export default function PaymentsPage() {
         setPaymentData(prev => ({
             ...prev,
             amountInCurrency,
-            amount: amountInReference,
-            is_partial: amountInReference < remaining
+            amount: amountInSelling,
+            is_partial: amountInSelling < remaining
         }));
     };
 
