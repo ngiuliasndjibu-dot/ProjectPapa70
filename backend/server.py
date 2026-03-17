@@ -1937,6 +1937,772 @@ async def get_hourly_sales(current_user: dict = Depends(get_current_user)):
     
     return [{"hour": h, "sales": s} for h, s in sorted(hourly.items())]
 
+# ============== RESTAURANT SETTINGS ROUTES ==============
+
+@api_router.get("/settings/restaurant")
+async def get_restaurant_settings(current_user: dict = Depends(get_current_user)):
+    settings = await db.restaurant_settings.find_one({"id": "restaurant_settings"}, {"_id": 0})
+    if not settings:
+        # Create default settings
+        default = RestaurantSettings()
+        await db.restaurant_settings.insert_one(default.model_dump())
+        return default.model_dump()
+    return settings
+
+@api_router.put("/settings/restaurant")
+async def update_restaurant_settings(settings: dict, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    settings["id"] = "restaurant_settings"
+    settings["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.restaurant_settings.update_one(
+        {"id": "restaurant_settings"},
+        {"$set": settings},
+        upsert=True
+    )
+    return await db.restaurant_settings.find_one({"id": "restaurant_settings"}, {"_id": 0})
+
+# ============== RESERVATION ROUTES ==============
+
+@api_router.get("/reservations")
+async def get_reservations(date: str = None, status: str = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if date:
+        query["date"] = date
+    if status:
+        query["status"] = status
+    
+    reservations = await db.reservations.find(query, {"_id": 0}).sort("date", 1).sort("time", 1).to_list(1000)
+    return reservations
+
+@api_router.post("/reservations")
+async def create_reservation(data: ReservationCreate, current_user: dict = Depends(get_current_user)):
+    # Get table info
+    table = await db.tables.find_one({"id": data.table_id}, {"_id": 0})
+    if not table:
+        raise HTTPException(status_code=404, detail="Table not found")
+    
+    # Check for conflicts
+    existing = await db.reservations.find_one({
+        "table_id": data.table_id,
+        "date": data.date,
+        "time": data.time,
+        "status": {"$in": ["pending", "confirmed"]}
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Table already reserved for this time")
+    
+    reservation = Reservation(
+        **data.model_dump(),
+        table_number=table["number"]
+    )
+    await db.reservations.insert_one(reservation.model_dump())
+    return reservation.model_dump()
+
+@api_router.put("/reservations/{reservation_id}")
+async def update_reservation(reservation_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    data.pop("id", None)
+    data.pop("_id", None)
+    
+    result = await db.reservations.update_one({"id": reservation_id}, {"$set": data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    
+    return await db.reservations.find_one({"id": reservation_id}, {"_id": 0})
+
+@api_router.delete("/reservations/{reservation_id}")
+async def delete_reservation(reservation_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.reservations.delete_one({"id": reservation_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    return {"message": "Reservation deleted"}
+
+@api_router.put("/reservations/{reservation_id}/status")
+async def update_reservation_status(reservation_id: str, status: str, current_user: dict = Depends(get_current_user)):
+    if status not in ["pending", "confirmed", "cancelled", "completed", "no_show"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    result = await db.reservations.update_one({"id": reservation_id}, {"$set": {"status": status}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    
+    return await db.reservations.find_one({"id": reservation_id}, {"_id": 0})
+
+# ============== LOYALTY PROGRAM ROUTES ==============
+
+@api_router.get("/loyalty/settings")
+async def get_loyalty_settings(current_user: dict = Depends(get_current_user)):
+    settings = await db.loyalty_settings.find_one({"id": "loyalty_settings"}, {"_id": 0})
+    if not settings:
+        default = LoyaltySettings()
+        await db.loyalty_settings.insert_one(default.model_dump())
+        return default.model_dump()
+    return settings
+
+@api_router.put("/loyalty/settings")
+async def update_loyalty_settings(settings: dict, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    settings["id"] = "loyalty_settings"
+    settings["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.loyalty_settings.update_one({"id": "loyalty_settings"}, {"$set": settings}, upsert=True)
+    return await db.loyalty_settings.find_one({"id": "loyalty_settings"}, {"_id": 0})
+
+@api_router.get("/loyalty/customers")
+async def get_loyalty_customers(search: str = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"phone": {"$regex": search, "$options": "i"}}
+        ]
+    customers = await db.loyalty_customers.find(query, {"_id": 0}).sort("points", -1).to_list(1000)
+    return customers
+
+@api_router.post("/loyalty/customers")
+async def create_loyalty_customer(data: dict, current_user: dict = Depends(get_current_user)):
+    # Check if phone already exists
+    existing = await db.loyalty_customers.find_one({"phone": data["phone"]})
+    if existing:
+        raise HTTPException(status_code=400, detail="Customer with this phone already exists")
+    
+    # Get welcome bonus
+    settings = await db.loyalty_settings.find_one({"id": "loyalty_settings"}, {"_id": 0})
+    welcome_bonus = settings.get("welcome_bonus", 10) if settings else 10
+    
+    customer = LoyaltyCustomer(
+        name=data["name"],
+        phone=data["phone"],
+        email=data.get("email", ""),
+        points=welcome_bonus
+    )
+    await db.loyalty_customers.insert_one(customer.model_dump())
+    
+    # Record welcome bonus transaction
+    if welcome_bonus > 0:
+        transaction = LoyaltyTransaction(
+            customer_id=customer.id,
+            points_earned=welcome_bonus,
+            description="Bonus de bienvenue"
+        )
+        await db.loyalty_transactions.insert_one(transaction.model_dump())
+    
+    return customer.model_dump()
+
+@api_router.get("/loyalty/customers/{customer_id}")
+async def get_loyalty_customer(customer_id: str, current_user: dict = Depends(get_current_user)):
+    customer = await db.loyalty_customers.find_one({"id": customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return customer
+
+@api_router.get("/loyalty/customers/phone/{phone}")
+async def get_loyalty_customer_by_phone(phone: str, current_user: dict = Depends(get_current_user)):
+    customer = await db.loyalty_customers.find_one({"phone": phone}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return customer
+
+@api_router.post("/loyalty/customers/{customer_id}/add-points")
+async def add_loyalty_points(customer_id: str, amount: float, order_id: str = "", current_user: dict = Depends(get_current_user)):
+    customer = await db.loyalty_customers.find_one({"id": customer_id})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    # Get settings
+    settings = await db.loyalty_settings.find_one({"id": "loyalty_settings"}, {"_id": 0})
+    currency_per_point = settings.get("currency_per_point", 100) if settings else 100
+    points_per_unit = settings.get("points_per_unit", 1) if settings else 1
+    
+    # Calculate points
+    points_earned = int((amount / currency_per_point) * points_per_unit)
+    
+    if points_earned > 0:
+        # Update customer
+        await db.loyalty_customers.update_one(
+            {"id": customer_id},
+            {
+                "$inc": {"points": points_earned, "total_spent": amount, "visit_count": 1},
+                "$set": {"last_visit": datetime.now(timezone.utc).isoformat()}
+            }
+        )
+        
+        # Record transaction
+        transaction = LoyaltyTransaction(
+            customer_id=customer_id,
+            order_id=order_id,
+            points_earned=points_earned,
+            amount=amount,
+            description=f"Achat de {amount} FC"
+        )
+        await db.loyalty_transactions.insert_one(transaction.model_dump())
+    
+    return await db.loyalty_customers.find_one({"id": customer_id}, {"_id": 0})
+
+@api_router.post("/loyalty/customers/{customer_id}/redeem")
+async def redeem_loyalty_points(customer_id: str, points: int, reward_id: str = "", current_user: dict = Depends(get_current_user)):
+    customer = await db.loyalty_customers.find_one({"id": customer_id})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    if customer["points"] < points:
+        raise HTTPException(status_code=400, detail="Insufficient points")
+    
+    # Update customer
+    await db.loyalty_customers.update_one(
+        {"id": customer_id},
+        {"$inc": {"points": -points}}
+    )
+    
+    # Record transaction
+    transaction = LoyaltyTransaction(
+        customer_id=customer_id,
+        points_spent=points,
+        description=f"Échange de {points} points"
+    )
+    await db.loyalty_transactions.insert_one(transaction.model_dump())
+    
+    return await db.loyalty_customers.find_one({"id": customer_id}, {"_id": 0})
+
+@api_router.get("/loyalty/rewards")
+async def get_loyalty_rewards(current_user: dict = Depends(get_current_user)):
+    rewards = await db.loyalty_rewards.find({}, {"_id": 0}).to_list(100)
+    return rewards
+
+@api_router.post("/loyalty/rewards")
+async def create_loyalty_reward(data: dict, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    reward = LoyaltyReward(**data)
+    await db.loyalty_rewards.insert_one(reward.model_dump())
+    return reward.model_dump()
+
+@api_router.delete("/loyalty/rewards/{reward_id}")
+async def delete_loyalty_reward(reward_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await db.loyalty_rewards.delete_one({"id": reward_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Reward not found")
+    return {"message": "Reward deleted"}
+
+# ============== INGREDIENTS & RECIPES ROUTES ==============
+
+@api_router.get("/ingredients")
+async def get_ingredients(current_user: dict = Depends(get_current_user)):
+    ingredients = await db.ingredients.find({}, {"_id": 0}).to_list(1000)
+    return ingredients
+
+@api_router.post("/ingredients")
+async def create_ingredient(data: dict, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    ingredient = Ingredient(**data)
+    await db.ingredients.insert_one(ingredient.model_dump())
+    return ingredient.model_dump()
+
+@api_router.put("/ingredients/{ingredient_id}")
+async def update_ingredient(ingredient_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    data.pop("id", None)
+    data.pop("_id", None)
+    
+    result = await db.ingredients.update_one({"id": ingredient_id}, {"$set": data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+    
+    return await db.ingredients.find_one({"id": ingredient_id}, {"_id": 0})
+
+@api_router.delete("/ingredients/{ingredient_id}")
+async def delete_ingredient(ingredient_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await db.ingredients.delete_one({"id": ingredient_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+    return {"message": "Ingredient deleted"}
+
+@api_router.post("/ingredients/{ingredient_id}/adjust-stock")
+async def adjust_ingredient_stock(ingredient_id: str, quantity_change: float, reason: str = "", current_user: dict = Depends(get_current_user)):
+    result = await db.ingredients.update_one(
+        {"id": ingredient_id},
+        {"$inc": {"quantity_in_stock": quantity_change}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+    
+    return await db.ingredients.find_one({"id": ingredient_id}, {"_id": 0})
+
+@api_router.get("/recipes")
+async def get_recipes(current_user: dict = Depends(get_current_user)):
+    recipes = await db.recipes.find({}, {"_id": 0}).to_list(1000)
+    return recipes
+
+@api_router.get("/recipes/menu-item/{menu_item_id}")
+async def get_recipe_by_menu_item(menu_item_id: str, current_user: dict = Depends(get_current_user)):
+    recipe = await db.recipes.find_one({"menu_item_id": menu_item_id}, {"_id": 0})
+    return recipe
+
+@api_router.post("/recipes")
+async def create_recipe(data: dict, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Check if recipe already exists for this menu item
+    existing = await db.recipes.find_one({"menu_item_id": data["menu_item_id"]})
+    if existing:
+        # Update existing recipe
+        await db.recipes.update_one({"menu_item_id": data["menu_item_id"]}, {"$set": data})
+        return await db.recipes.find_one({"menu_item_id": data["menu_item_id"]}, {"_id": 0})
+    
+    # Get menu item name
+    menu_item = await db.menu_items.find_one({"id": data["menu_item_id"]}, {"_id": 0})
+    if menu_item:
+        data["menu_item_name"] = menu_item["name"]
+    
+    recipe = Recipe(**data)
+    await db.recipes.insert_one(recipe.model_dump())
+    return recipe.model_dump()
+
+@api_router.delete("/recipes/{recipe_id}")
+async def delete_recipe(recipe_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await db.recipes.delete_one({"id": recipe_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return {"message": "Recipe deleted"}
+
+# Function to deduct ingredients when order is completed
+async def deduct_ingredients_for_order(order_id: str):
+    """Deduct ingredients from stock based on order items"""
+    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        return
+    
+    for item in order.get("items", []):
+        recipe = await db.recipes.find_one({"menu_item_id": item.get("menu_item_id"), "is_active": True})
+        if recipe:
+            quantity = item.get("quantity", 1)
+            for ingredient in recipe.get("ingredients", []):
+                # Deduct from stock
+                await db.ingredients.update_one(
+                    {"id": ingredient["ingredient_id"]},
+                    {"$inc": {"quantity_in_stock": -ingredient["quantity"] * quantity}}
+                )
+
+# ============== ORDER FUSION/SPLIT ROUTES ==============
+
+@api_router.post("/orders/merge")
+async def merge_orders(order_ids: List[str], target_table_id: str, current_user: dict = Depends(get_current_user)):
+    """Merge multiple orders into one"""
+    if len(order_ids) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 orders required for merge")
+    
+    # Get all orders
+    orders = await db.orders.find({"id": {"$in": order_ids}}, {"_id": 0}).to_list(100)
+    if len(orders) != len(order_ids):
+        raise HTTPException(status_code=404, detail="One or more orders not found")
+    
+    # Get target table
+    target_table = await db.tables.find_one({"id": target_table_id}, {"_id": 0})
+    if not target_table:
+        raise HTTPException(status_code=404, detail="Target table not found")
+    
+    # Merge all items
+    merged_items = []
+    total = 0
+    for order in orders:
+        merged_items.extend(order.get("items", []))
+        total += order.get("total", 0)
+    
+    # Create new merged order
+    new_order_number = await get_next_order_number()
+    merged_order = {
+        "id": str(uuid.uuid4()),
+        "order_number": new_order_number,
+        "table_id": target_table_id,
+        "table_number": target_table["number"],
+        "server_id": current_user["id"],
+        "server_name": current_user["full_name"],
+        "items": merged_items,
+        "total": total,
+        "status": "pending",
+        "notes": f"Fusion des commandes: {', '.join([str(o['order_number']) for o in orders])}",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "merged_from": order_ids
+    }
+    
+    await db.orders.insert_one(merged_order)
+    
+    # Mark original orders as merged
+    for order_id in order_ids:
+        await db.orders.update_one(
+            {"id": order_id},
+            {"$set": {"status": "merged", "merged_into": merged_order["id"]}}
+        )
+    
+    # Free up original tables except target
+    for order in orders:
+        if order["table_id"] != target_table_id:
+            await db.tables.update_one({"id": order["table_id"]}, {"$set": {"status": "free"}})
+    
+    merged_order.pop("_id", None)
+    return merged_order
+
+@api_router.post("/orders/{order_id}/split")
+async def split_order(order_id: str, split_type: str, split_data: dict, current_user: dict = Depends(get_current_user)):
+    """
+    Split an order into multiple orders
+    split_type: 'by_items' or 'equal'
+    split_data for 'by_items': {"parts": [{"item_ids": [...], "table_id": "..."}, ...]}
+    split_data for 'equal': {"num_parts": 2, "table_ids": ["...", "..."]}
+    """
+    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    new_orders = []
+    
+    if split_type == "by_items":
+        # Split by specific items
+        parts = split_data.get("parts", [])
+        for part in parts:
+            item_ids = part.get("item_ids", [])
+            table_id = part.get("table_id", order["table_id"])
+            
+            # Get table
+            table = await db.tables.find_one({"id": table_id}, {"_id": 0})
+            if not table:
+                continue
+            
+            # Get items for this part
+            part_items = [item for item in order["items"] if item["id"] in item_ids]
+            if not part_items:
+                continue
+            
+            # Calculate total
+            part_total = sum(item["quantity"] * item["unit_price"] for item in part_items)
+            
+            # Create new order
+            new_order_number = await get_next_order_number()
+            new_order = {
+                "id": str(uuid.uuid4()),
+                "order_number": new_order_number,
+                "table_id": table_id,
+                "table_number": table["number"],
+                "server_id": current_user["id"],
+                "server_name": current_user["full_name"],
+                "items": part_items,
+                "total": part_total,
+                "status": "pending",
+                "notes": f"Division de la commande #{order['order_number']}",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "split_from": order_id
+            }
+            await db.orders.insert_one(new_order)
+            new_order.pop("_id", None)
+            new_orders.append(new_order)
+            
+            # Update table status
+            await db.tables.update_one({"id": table_id}, {"$set": {"status": "occupied"}})
+    
+    elif split_type == "equal":
+        # Split equally
+        num_parts = split_data.get("num_parts", 2)
+        table_ids = split_data.get("table_ids", [order["table_id"]] * num_parts)
+        
+        # Calculate equal amount
+        total = order.get("total", 0)
+        amount_per_part = total / num_parts
+        
+        for i, table_id in enumerate(table_ids[:num_parts]):
+            table = await db.tables.find_one({"id": table_id}, {"_id": 0})
+            if not table:
+                continue
+            
+            new_order_number = await get_next_order_number()
+            new_order = {
+                "id": str(uuid.uuid4()),
+                "order_number": new_order_number,
+                "table_id": table_id,
+                "table_number": table["number"],
+                "server_id": current_user["id"],
+                "server_name": current_user["full_name"],
+                "items": order["items"] if i == 0 else [],  # Items only on first split
+                "total": amount_per_part,
+                "status": "pending",
+                "notes": f"Division égale #{i+1}/{num_parts} de la commande #{order['order_number']}",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "split_from": order_id,
+                "is_equal_split": True
+            }
+            await db.orders.insert_one(new_order)
+            new_order.pop("_id", None)
+            new_orders.append(new_order)
+            
+            await db.tables.update_one({"id": table_id}, {"$set": {"status": "occupied"}})
+    
+    # Mark original order as split
+    await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {"status": "split", "split_into": [o["id"] for o in new_orders]}}
+    )
+    
+    return {"original_order": order_id, "new_orders": new_orders}
+
+# Helper to get next order number
+async def get_next_order_number():
+    counter = await db.counters.find_one_and_update(
+        {"_id": "order_number"},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True
+    )
+    return counter["seq"]
+
+# ============== INVOICE/RECEIPT GENERATION ==============
+
+@api_router.post("/orders/{order_id}/close-table")
+async def close_table_and_generate_invoice(order_id: str, payment_method: str = "cash", loyalty_customer_id: str = None, current_user: dict = Depends(get_current_user)):
+    """Close a table and generate invoice"""
+    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Get restaurant settings
+    settings = await db.restaurant_settings.find_one({"id": "restaurant_settings"}, {"_id": 0})
+    if not settings:
+        settings = RestaurantSettings().model_dump()
+    
+    # Get currency
+    selling_currency = await db.currencies.find_one({"is_selling": True}, {"_id": 0})
+    currency_symbol = selling_currency["symbol"] if selling_currency else "FC"
+    
+    # Create payment record
+    payment = {
+        "id": str(uuid.uuid4()),
+        "order_id": order_id,
+        "amount": order["total"],
+        "method": payment_method,
+        "cashier_id": current_user["id"],
+        "cashier_name": current_user["full_name"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.payments.insert_one(payment)
+    
+    # Update order status
+    await db.orders.update_one({"id": order_id}, {"$set": {"status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}})
+    
+    # Free up the table
+    await db.tables.update_one({"id": order["table_id"]}, {"$set": {"status": "cleaning"}})
+    
+    # Deduct ingredients if recipes exist
+    await deduct_ingredients_for_order(order_id)
+    
+    # Add loyalty points if customer provided
+    if loyalty_customer_id:
+        await add_loyalty_points(loyalty_customer_id, order["total"], order_id, current_user)
+    
+    # Generate invoice number
+    invoice_number = f"FAC-{datetime.now().strftime('%Y%m%d')}-{order['order_number']:04d}"
+    
+    # Create invoice record
+    invoice = {
+        "id": str(uuid.uuid4()),
+        "invoice_number": invoice_number,
+        "order_id": order_id,
+        "order_number": order["order_number"],
+        "table_number": order["table_number"],
+        "items": order["items"],
+        "subtotal": order["total"],
+        "total": order["total"],
+        "payment_method": payment_method,
+        "currency_symbol": currency_symbol,
+        "restaurant": settings,
+        "server_name": order["server_name"],
+        "cashier_name": current_user["full_name"],
+        "loyalty_customer_id": loyalty_customer_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.invoices.insert_one(invoice)
+    
+    invoice.pop("_id", None)
+    return invoice
+
+@api_router.get("/invoices/{invoice_id}")
+async def get_invoice(invoice_id: str, current_user: dict = Depends(get_current_user)):
+    invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return invoice
+
+@api_router.get("/invoices/order/{order_id}")
+async def get_invoice_by_order(order_id: str, current_user: dict = Depends(get_current_user)):
+    invoice = await db.invoices.find_one({"order_id": order_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return invoice
+
+# ============== PDF REPORTS ROUTES ==============
+
+from io import BytesIO
+from fastapi.responses import StreamingResponse
+
+@api_router.get("/reports/daily-sales")
+async def get_daily_sales_report(date: str = None, current_user: dict = Depends(get_current_user)):
+    """Get daily sales report data"""
+    if not date:
+        date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    
+    start = datetime.fromisoformat(f"{date}T00:00:00+00:00")
+    end = datetime.fromisoformat(f"{date}T23:59:59+00:00")
+    
+    # Get orders
+    orders = await db.orders.find({
+        "created_at": {"$gte": start.isoformat(), "$lte": end.isoformat()},
+        "status": {"$nin": ["cancelled", "merged", "split"]}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Get payments
+    payments = await db.payments.find({
+        "created_at": {"$gte": start.isoformat(), "$lte": end.isoformat()}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Calculate totals
+    total_revenue = sum(p["amount"] for p in payments)
+    order_count = len(orders)
+    
+    # By payment method
+    by_method = {}
+    for p in payments:
+        method = p["method"]
+        by_method[method] = by_method.get(method, 0) + p["amount"]
+    
+    # By department
+    by_department = {"kitchen": 0, "bar": 0}
+    for order in orders:
+        for item in order.get("items", []):
+            dept = item.get("department", "kitchen")
+            by_department[dept] = by_department.get(dept, 0) + item["quantity"] * item["unit_price"]
+    
+    # Top items
+    item_sales = {}
+    for order in orders:
+        for item in order.get("items", []):
+            name = item.get("menu_item_name", "Unknown")
+            if name not in item_sales:
+                item_sales[name] = {"quantity": 0, "revenue": 0}
+            item_sales[name]["quantity"] += item["quantity"]
+            item_sales[name]["revenue"] += item["quantity"] * item["unit_price"]
+    
+    top_items = sorted(
+        [{"name": k, **v} for k, v in item_sales.items()],
+        key=lambda x: x["revenue"],
+        reverse=True
+    )[:10]
+    
+    # Hourly breakdown
+    hourly = {}
+    for order in orders:
+        hour = datetime.fromisoformat(order["created_at"].replace("Z", "+00:00")).hour
+        hourly[hour] = hourly.get(hour, 0) + order.get("total", 0)
+    
+    return {
+        "date": date,
+        "total_revenue": total_revenue,
+        "order_count": order_count,
+        "average_order": total_revenue / order_count if order_count > 0 else 0,
+        "by_payment_method": by_method,
+        "by_department": by_department,
+        "top_items": top_items,
+        "hourly_sales": [{"hour": h, "amount": a} for h, a in sorted(hourly.items())]
+    }
+
+@api_router.get("/reports/period-sales")
+async def get_period_sales_report(start_date: str, end_date: str, current_user: dict = Depends(get_current_user)):
+    """Get sales report for a period"""
+    start = datetime.fromisoformat(f"{start_date}T00:00:00+00:00")
+    end = datetime.fromisoformat(f"{end_date}T23:59:59+00:00")
+    
+    # Get payments
+    payments = await db.payments.find({
+        "created_at": {"$gte": start.isoformat(), "$lte": end.isoformat()}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Get orders
+    orders = await db.orders.find({
+        "created_at": {"$gte": start.isoformat(), "$lte": end.isoformat()},
+        "status": {"$nin": ["cancelled", "merged", "split"]}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Daily breakdown
+    daily = {}
+    for p in payments:
+        day = p["created_at"][:10]
+        if day not in daily:
+            daily[day] = {"revenue": 0, "orders": 0}
+        daily[day]["revenue"] += p["amount"]
+    
+    for o in orders:
+        day = o["created_at"][:10]
+        if day in daily:
+            daily[day]["orders"] += 1
+    
+    total_revenue = sum(p["amount"] for p in payments)
+    
+    return {
+        "start_date": start_date,
+        "end_date": end_date,
+        "total_revenue": total_revenue,
+        "total_orders": len(orders),
+        "daily_breakdown": [{"date": k, **v} for k, v in sorted(daily.items())]
+    }
+
+@api_router.get("/reports/stock")
+async def get_stock_report(current_user: dict = Depends(get_current_user)):
+    """Get stock status report"""
+    # Get all stock items
+    stock_items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
+    
+    # Get ingredients
+    ingredients = await db.ingredients.find({}, {"_id": 0}).to_list(1000)
+    
+    # Get bottles
+    bottles = await db.bottles.find({}, {"_id": 0}).to_list(1000)
+    
+    # Calculate alerts
+    stock_alerts = [s for s in stock_items if s.get("quantity", 0) <= s.get("alert_threshold", 10)]
+    ingredient_alerts = [i for i in ingredients if i.get("quantity_in_stock", 0) <= i.get("alert_threshold", 10)]
+    bottle_alerts = [b for b in bottles if b.get("quantity_in_stock", 0) <= b.get("alert_threshold", 2)]
+    
+    # Calculate total value
+    stock_value = sum(s.get("quantity", 0) * s.get("unit_price", 0) for s in stock_items)
+    ingredient_value = sum(i.get("quantity_in_stock", 0) * i.get("cost_per_unit", 0) for i in ingredients)
+    
+    return {
+        "stock_items": stock_items,
+        "ingredients": ingredients,
+        "bottles": bottles,
+        "stock_alerts": stock_alerts,
+        "ingredient_alerts": ingredient_alerts,
+        "bottle_alerts": bottle_alerts,
+        "total_stock_value": stock_value,
+        "total_ingredient_value": ingredient_value,
+        "generated_at": datetime.now(timezone.utc).isoformat()
+    }
+
 # ============== SEED DATA ==============
 
 @api_router.post("/seed", response_model=dict)
