@@ -5,9 +5,25 @@ export function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
-// Format price (FCFA)
-export function formatPrice(price) {
+// Format price with currency (default FCFA for backward compatibility)
+export function formatPrice(price, currency = null) {
+    if (currency) {
+        const formatted = new Intl.NumberFormat('fr-FR', {
+            minimumFractionDigits: currency.decimal_places || 0,
+            maximumFractionDigits: currency.decimal_places || 0,
+        }).format(price);
+        return `${formatted} ${currency.symbol}`;
+    }
     return new Intl.NumberFormat('fr-FR').format(price) + ' FCFA';
+}
+
+// Format price with specific symbol
+export function formatPriceWithSymbol(price, symbol = 'FCFA', decimals = 0) {
+    const formatted = new Intl.NumberFormat('fr-FR', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+    }).format(price);
+    return `${formatted} ${symbol}`;
 }
 
 // Format date
