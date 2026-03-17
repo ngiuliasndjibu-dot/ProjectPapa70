@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usersAPI, printersAPI, currencyAPI, menuAPI } from '../lib/api';
-import { getRoleLabel, getDepartmentLabel, formatPrice } from '../lib/utils';
+import { getRoleLabel, getDepartmentLabel } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
