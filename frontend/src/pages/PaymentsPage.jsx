@@ -48,6 +48,7 @@ export default function PaymentsPage() {
         formatPriceReference,
         convertToSelling,
         convertToReference,
+        convert,
         getPriceForPayment,
         loading: currencyLoading 
     } = useCurrency();
