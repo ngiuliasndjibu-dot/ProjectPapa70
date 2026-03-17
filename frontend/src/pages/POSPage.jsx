@@ -133,6 +133,7 @@ export default function POSPage() {
     };
 
     const cartTotal = cart.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+    const cartTotalSelling = getDisplayPrice(cartTotal);
     const kitchenItems = cart.filter(item => item.department === 'kitchen');
     const barItems = cart.filter(item => item.department === 'bar');
 
