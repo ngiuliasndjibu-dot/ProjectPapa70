@@ -1049,6 +1049,252 @@ async def delete_printer(printer_id: str, current_user: dict = Depends(get_curre
         raise HTTPException(status_code=404, detail="Printer not found")
     return {"message": "Printer deleted"}
 
+# ============== PRINTING ROUTES (ESC/POS) ==============
+
+from printer_service import printer_service, PrinterConfig, PrinterType
+
+@api_router.post("/printers/{printer_id}/test")
+async def test_printer_connection(printer_id: str, current_user: dict = Depends(get_current_user)):
+    """Test connection to a printer"""
+    printer = await db.printers.find_one({"id": printer_id}, {"_id": 0})
+    if not printer:
+        raise HTTPException(status_code=404, detail="Printer not found")
+    
+    # Register printer with service if not already
+    config = PrinterConfig(
+        name=printer["name"],
+        ip_address=printer["ip_address"],
+        port=printer.get("port", 9100),
+        printer_type=PrinterType.NETWORK
+    )
+    printer_service.add_printer(printer_id, config)
+    
+    # Check status
+    status = await printer_service.check_printer_status(printer_id)
+    
+    # Update printer status in database
+    new_status = "online" if status["status"] == "online" else "offline"
+    await db.printers.update_one({"id": printer_id}, {"$set": {"status": new_status}})
+    
+    return status
+
+@api_router.post("/printers/{printer_id}/print-test")
+async def print_test_page(printer_id: str, current_user: dict = Depends(get_current_user)):
+    """Print a test page"""
+    printer = await db.printers.find_one({"id": printer_id}, {"_id": 0})
+    if not printer:
+        raise HTTPException(status_code=404, detail="Printer not found")
+    
+    # Register printer
+    config = PrinterConfig(
+        name=printer["name"],
+        ip_address=printer["ip_address"],
+        port=printer.get("port", 9100),
+        printer_type=PrinterType.NETWORK
+    )
+    printer_service.add_printer(printer_id, config)
+    
+    # Create test ticket
+    test_ticket = printer_service.create_kitchen_ticket(
+        order_number=0,
+        table_number=0,
+        server_name="TEST",
+        items=[
+            {"quantity": 1, "menu_item_name": "Test Article 1"},
+            {"quantity": 2, "menu_item_name": "Test Article 2", "notes": "Note de test"},
+        ],
+        notes="Ceci est un test d'impression"
+    )
+    
+    # Print
+    result = await printer_service.print_raw(printer_id, test_ticket)
+    
+    if result["success"]:
+        return {"message": "Test page printed successfully", "printer": printer["name"]}
+    else:
+        raise HTTPException(status_code=500, detail=result.get("error", "Print failed"))
+
+@api_router.post("/print-jobs/{job_id}/print")
+async def execute_print_job(job_id: str, current_user: dict = Depends(get_current_user)):
+    """Execute a pending print job and send to printer"""
+    job = await db.print_jobs.find_one({"id": job_id}, {"_id": 0})
+    if not job:
+        raise HTTPException(status_code=404, detail="Print job not found")
+    
+    printer_id = job.get("printer_id", "default")
+    
+    # Get printer config
+    printer = await db.printers.find_one({"id": printer_id}, {"_id": 0})
+    if not printer:
+        # Try to get any online printer for this department
+        printer = await db.printers.find_one(
+            {"department": job["department"], "status": "online"},
+            {"_id": 0}
+        )
+    
+    if not printer:
+        # Mark job as failed
+        await db.print_jobs.update_one({"id": job_id}, {"$set": {"status": "no_printer"}})
+        return {"success": False, "error": "No printer available for this department"}
+    
+    # Register printer
+    config = PrinterConfig(
+        name=printer["name"],
+        ip_address=printer["ip_address"],
+        port=printer.get("port", 9100),
+        printer_type=PrinterType.NETWORK
+    )
+    printer_service.add_printer(printer["id"], config)
+    
+    # Generate ticket based on department
+    if job["department"] == "kitchen":
+        ticket_data = printer_service.create_kitchen_ticket(
+            order_number=job["order_number"],
+            table_number=job["table_number"],
+            server_name=job["server_name"],
+            items=job["items"],
+            notes=job.get("notes", "")
+        )
+    else:  # bar
+        ticket_data = printer_service.create_bar_ticket(
+            order_number=job["order_number"],
+            table_number=job["table_number"],
+            server_name=job["server_name"],
+            items=job["items"],
+            notes=job.get("notes", "")
+        )
+    
+    # Print
+    result = await printer_service.print_raw(printer["id"], ticket_data)
+    
+    # Update job status
+    new_status = "printed" if result["success"] else "failed"
+    await db.print_jobs.update_one(
+        {"id": job_id},
+        {"$set": {"status": new_status, "printed_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return result
+
+@api_router.post("/orders/{order_id}/print-receipt")
+async def print_order_receipt(order_id: str, printer_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """Print a customer receipt for an order"""
+    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Get printer
+    if printer_id:
+        printer = await db.printers.find_one({"id": printer_id}, {"_id": 0})
+    else:
+        # Get any online printer (preferably cashier printer)
+        printer = await db.printers.find_one({"status": "online"}, {"_id": 0})
+    
+    if not printer:
+        return {"success": False, "error": "No printer available"}
+    
+    # Register printer
+    config = PrinterConfig(
+        name=printer["name"],
+        ip_address=printer["ip_address"],
+        port=printer.get("port", 9100),
+        printer_type=PrinterType.NETWORK
+    )
+    printer_service.add_printer(printer["id"], config)
+    
+    # Get currency for formatting
+    selling_currency = await db.currencies.find_one({"is_selling": True}, {"_id": 0})
+    currency_symbol = selling_currency["symbol"] if selling_currency else "FCFA"
+    
+    # Create receipt
+    receipt_data = printer_service.create_receipt(
+        order_number=order["order_number"],
+        table_number=order["table_number"],
+        server_name=order["server_name"],
+        items=order["items"],
+        subtotal=order.get("total", 0),
+        total=order.get("total", 0),
+        currency_symbol=currency_symbol,
+        restaurant_name="LUMIÈRE RESTAURANT"
+    )
+    
+    # Print
+    result = await printer_service.print_raw(printer["id"], receipt_data)
+    return result
+
+@api_router.post("/reports/daily-close/print")
+async def print_daily_close_report(printer_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """Print the daily close report"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.CASHIER]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Get daily stats
+    payments = await db.payments.find(
+        {"created_at": {"$gte": today.isoformat()}},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    orders = await db.orders.find(
+        {"created_at": {"$gte": today.isoformat()}, "status": {"$ne": "cancelled"}},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    # Calculate totals
+    total_revenue = sum(p["amount"] for p in payments)
+    order_count = len(orders)
+    
+    # Payment breakdown
+    payment_breakdown = {}
+    for p in payments:
+        method = p["method"]
+        payment_breakdown[method] = payment_breakdown.get(method, 0) + p["amount"]
+    
+    # Department breakdown
+    department_breakdown = {"kitchen": 0, "bar": 0}
+    for order in orders:
+        for item in order.get("items", []):
+            dept = item.get("department", "kitchen")
+            amount = item["quantity"] * item["unit_price"]
+            department_breakdown[dept] = department_breakdown.get(dept, 0) + amount
+    
+    # Get printer
+    if printer_id:
+        printer = await db.printers.find_one({"id": printer_id}, {"_id": 0})
+    else:
+        printer = await db.printers.find_one({"status": "online"}, {"_id": 0})
+    
+    if not printer:
+        return {"success": False, "error": "No printer available"}
+    
+    # Register printer
+    config = PrinterConfig(
+        name=printer["name"],
+        ip_address=printer["ip_address"],
+        port=printer.get("port", 9100),
+        printer_type=PrinterType.NETWORK
+    )
+    printer_service.add_printer(printer["id"], config)
+    
+    # Get currency
+    selling_currency = await db.currencies.find_one({"is_selling": True}, {"_id": 0})
+    currency_symbol = selling_currency["symbol"] if selling_currency else "FCFA"
+    
+    # Create report
+    report_data = printer_service.create_daily_close_report(
+        date=today.strftime('%d/%m/%Y'),
+        total_revenue=total_revenue,
+        order_count=order_count,
+        payment_breakdown=payment_breakdown,
+        department_breakdown=department_breakdown,
+        currency_symbol=currency_symbol
+    )
+    
+    # Print
+    result = await printer_service.print_raw(printer["id"], report_data)
+    return result
+
 # ============== PAYMENTS ROUTES ==============
 
 @api_router.get("/payments", response_model=List[dict])
