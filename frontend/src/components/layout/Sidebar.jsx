@@ -17,6 +17,7 @@ import {
     LogOut,
     User,
     Printer,
+    Users,
 } from 'lucide-react';
 
 const navItems = [
@@ -30,6 +31,7 @@ const navItems = [
     { path: '/bottles', label: 'Bouteilles', icon: Beaker, roles: ['admin', 'bartender'] },
     { path: '/payments', label: 'Paiements', icon: CreditCard, roles: ['admin', 'cashier'] },
     { path: '/printers', label: 'Imprimantes', icon: Printer, roles: ['admin'] },
+    { path: '/users', label: 'Utilisateurs', icon: Users, roles: ['admin'] },
     { path: '/settings', label: 'Paramètres', icon: Settings, roles: ['admin'] },
 ];
 
