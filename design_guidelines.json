@@ -1,0 +1,153 @@
+{
+  "theme_and_archetype": {
+    "domain": "E-commerce (Tech Gadgets)",
+    "theme": "Dark Mode (Primary) / Light Mode (Toggle)",
+    "archetype": "Archetype 4 (Swiss & High-Contrast)",
+    "reasoning": "A high-end tech gadget e-commerce site needs an authoritative, modern, and high-contrast look to make the products pop. Dark mode emphasizes luxury and reduces eye strain, perfectly matching the provided #1A1A2E background and #0066FF primary blue."
+  },
+  "color_palette": {
+    "primary": "#0066FF",
+    "primary_hover": "#3385FF",
+    "background_dark": "#1A1A2E",
+    "surface_dark": "#252542",
+    "surface_light_dark": "#30304D",
+    "background_light": "#F8FAFC",
+    "surface_light": "#FFFFFF",
+    "text_dark_mode_primary": "#FFFFFF",
+    "text_dark_mode_secondary": "#A0AEC0",
+    "text_light_mode_primary": "#1A1A2E",
+    "text_light_mode_secondary": "#4A5568",
+    "accent_success": "#00C853",
+    "accent_warning": "#FFB300",
+    "accent_danger": "#FF3B30",
+    "rules": [
+      "Use #1A1A2E as the absolute foundation for dark mode. Do not use pure black (#000000).",
+      "Use #0066FF strategically for primary CTAs (Add to Cart, Buy Now, Primary Buttons).",
+      "Ensure all text on dark backgrounds meets a 4.5:1 contrast ratio.",
+      "Hover states must be a lighter hue of the active state color."
+    ]
+  },
+  "typography": {
+    "headings": {
+      "family": "'Outfit', sans-serif",
+      "weights": ["400", "600", "800"],
+      "tracking": "tracking-tight",
+      "rules": "Never use Inter for headings. Keep headings expressive and bold. H1 maxes at text-6xl."
+    },
+    "body": {
+      "family": "'Manrope', sans-serif",
+      "weights": ["400", "500", "600"],
+      "tracking": "tracking-normal",
+      "rules": "Use for dense content, specifications, and descriptions. Maintain generous line height (leading-relaxed)."
+    },
+    "sizes": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tighter font-extrabold",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-bold",
+      "h3": "text-xl sm:text-2xl tracking-tight font-semibold",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-base",
+      "small": "text-sm",
+      "overline": "uppercase text-xs tracking-[0.2em] font-bold text-[#0066FF]"
+    }
+  },
+  "surfaces_and_borders": {
+    "header": {
+      "style": "Crystal Glassmorphism",
+      "dark_classes": "backdrop-blur-xl bg-[#1A1A2E]/70 border-b border-white/10",
+      "light_classes": "backdrop-blur-xl bg-white/70 border-b border-black/5"
+    },
+    "cards_products": {
+      "style": "Technical Grid / Tactile Neumorphism",
+      "dark_classes": "bg-[#252542] border border-white/5 rounded-2xl shadow-lg hover:-translate-y-1 transition-transform duration-300",
+      "light_classes": "bg-white border border-black/5 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+    },
+    "hero_overlay": {
+      "dark_classes": "bg-gradient-to-r from-[#1A1A2E]/90 via-[#1A1A2E]/50 to-transparent",
+      "light_classes": "bg-gradient-to-r from-white/90 via-white/50 to-transparent"
+    },
+    "buttons": {
+      "primary": "bg-[#0066FF] text-white hover:bg-[#3385FF] rounded-full font-semibold transition-all duration-200 shadow-[0_0_15px_rgba(0,102,255,0.4)] hover:shadow-[0_0_25px_rgba(0,102,255,0.6)]",
+      "secondary": "bg-transparent border border-[#0066FF] text-[#0066FF] hover:bg-[#0066FF]/10 rounded-full font-semibold transition-all duration-200"
+    }
+  },
+  "layout_and_spacing": {
+    "philosophy": "Generous Spacing & High Visual Impact",
+    "grid_system": "Bento Grid (Tetris Mode) for featured products and categories. Use grid-cols-1 md:grid-cols-8 lg:grid-cols-12 with wide gaps (gap-8).",
+    "containers": "Use max-w-7xl mx-auto with px-6 or px-8 for standard sections.",
+    "section_spacing": "py-24 or py-32 for major sections to allow content to breathe.",
+    "image_constraints": "Mobile images must not exceed max-h-[80vh]."
+  },
+  "components_strategy": {
+    "frameworks": ["Tailwind CSS", "Shadcn UI", "Framer Motion", "lucide-react"],
+    "navigation": "Sticky nav with crystal glass effect. Must contain Logo, Links, Theme Toggle, Cart Icon, and Profile Icon. Never hide all links in a hamburger on desktop.",
+    "product_catalog": "Cardless or subtle rectangular grids. Filters on the left (desktop) or in a slide-out drawer (mobile).",
+    "product_detail": "Immersive image gallery taking up 50% of viewport width on desktop. Sticky 'Add to Cart' bar on mobile.",
+    "cart": "Slide-out sheet (Shadcn Sheet) with real-time quantity updates and promo code input.",
+    "chatbot": "Floating AI Chatbot orb in bottom-right corner. Use glowing animations.",
+    "rules": [
+      "Add data-testid to all interactive elements (buttons, inputs, toggles, cart items).",
+      "Use Shadcn primitives for logic (Dialog, Select, Tabs, Accordion) but customize heavily to match the #1A1A2E and #0066FF aesthetic."
+    ]
+  },
+  "motion_and_interactions": {
+    "hover_states": "All buttons, cards, and links MUST have explicit hover states (color, transform, or shadow changes).",
+    "page_transitions": "Staggered fade-in-up for product grids using Framer Motion.",
+    "micro_interactions": "Cart icon bounce on add to cart. Smooth scrolling via lenis."
+  },
+  "media": {
+    "hero_banner": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/9a9a2cca-e16e-40be-aff7-9376c775c950/images/0417b951452942f68488e27db0f2f0a055bb7ceab54e7079dc29d98737a9601e.png",
+      "description": "Sleek floating 3D composition of modern tech gadgets with electric blue accents.",
+      "placement": "Homepage Hero Section Background"
+    },
+    "products": [
+      {
+        "url": "https://images.unsplash.com/photo-1559743340-53fc2a036984?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxNzV8MHwxfHNlYXJjaHwyfHxoZWFkcGhvbmVzJTIwc21hcnRwaG9uZSUyMHNtYXJ0JTIwd2F0Y2h8ZW58MHx8fHwxNzc1MTU0NDg0fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Premium Wireless Headphones",
+        "placement": "Product Catalog / Product Detail Mockup"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1522205987242-8e22924ab42a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxNzV8MHwxfHNlYXJjaHwzfHxoZWFkcGhvbmVzJTIwc21hcnRwaG9uZSUyMHNtYXJ0JTIwd2F0Y2h8ZW58MHx8fHwxNzc1MTU0NDg0fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Smartwatch with Earbuds",
+        "placement": "Featured Products / Categories"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1633365087912-6eca333a2a28?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MTN8MHwxfHNlYXJjaHwxfHx0ZWNoJTIwZ2FkZ2V0cyUyMGRlc2slMjBkYXJrfGVufDB8fHx8MTc3NTE1NDQ4NHww&ixlib=rb-4.1.0&q=85",
+        "description": "Gaming Keyboard and Mouse",
+        "placement": "Popular Items"
+      },
+      {
+        "url": "https://images.pexels.com/photos/11450270/pexels-photo-11450270.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Minimalist Desktop Setup",
+        "placement": "New Arrivals"
+      }
+    ],
+    "chatbot_avatar": {
+      "url": "https://images.unsplash.com/photo-1684369175833-4b445ad6bfb5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwyfHxhaSUyMGNoYXRib3QlMjBhdmF0YXIlMjAzZHxlbnwwfHx8fDE3NzUxNTQ0OTV8MA&ixlib=rb-4.1.0&q=85",
+      "description": "AI Robot Avatar",
+      "placement": "AI Chatbot Widget Icon/Header"
+    },
+    "logos": [
+      {
+        "url": "https://images.unsplash.com/photo-1762340277392-4bd9466ca8a2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzR8MHwxfHNlYXJjaHw0fHx0ZWNoJTIwY29tcGFueSUyMGxvZ29zJTIwc3BvbnNvcnxlbnwwfHx8fDE3NzUxNTQ0OTV8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Partner Logo 1",
+        "placement": "Footer or Partner Strip"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1766371900950-929959f2bb67?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzR8MHwxfHNlYXJjaHwzfHx0ZWNoJTIwY29tcGFueSUyMGxvZ29zJTIwc3BvbnNvcnxlbnwwfHx8fDE3NzUxNTQ0OTV8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Partner Logo 2",
+        "placement": "Footer or Partner Strip"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Install and use 'lucide-react' for all icons.",
+    "Implement the Layout and Spacing strictly. Use pure HTML/Tailwind for structural marketing pages, and Shadcn for complex logic (Dropdowns, Tabs).",
+    "Ensure Dark Mode is properly supported via Tailwind 'dark:' utility classes. The base background should transition between #F8FAFC (light) and #1A1A2E (dark).",
+    "Implement Framer Motion for scroll effects, page transitions, and the AI chatbot toggle.",
+    "The Hero Section must use the provided hero_banner media URL with a gradient overlay to ensure text readability.",
+    "Do not use generic sans-serif fonts like 'Inter' for Headings. Use 'Outfit' or a similar expressive sans. Use 'Manrope' for body copy.",
+    "Build out the multi-step Checkout component with clear hierarchy, ensuring Mobile Money and Stripe options are visually distinct and clear.",
+    "In the Dashboard and Admin Panel, go cardless or use subtle borders, maximizing data density and utilizing chart libraries like Recharts."
+  ]
+}
