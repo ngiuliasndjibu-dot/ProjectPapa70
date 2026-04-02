@@ -66,7 +66,7 @@ export const Footer = () => {
                 <Package className="w-6 h-6 text-white" />
               </div>
               <span className="font-bold text-xl">
-                Tech<span className="text-[#0066FF]">Gadgets</span>
+                Hyper-<span className="text-[#0066FF]">Gadgets</span>
               </span>
             </Link>
             <p className="text-gray-400 mb-6 max-w-sm">
@@ -83,7 +83,7 @@ export const Footer = () => {
               </div>
               <div className="flex items-center gap-3 text-gray-400">
                 <Mail className="w-5 h-5 text-[#0066FF]" />
-                <span>contact@techgadgets.cd</span>
+                <span>contact@hyper-gadgets.cd</span>
               </div>
             </div>
           </div>
@@ -172,7 +172,7 @@ export const Footer = () => {
 
         {/* Copyright */}
         <div className="mt-8 text-center text-gray-500 text-sm">
-          <p>&copy; {new Date().getFullYear()} TechGadgets. Tous droits réservés.</p>
+          <p>&copy; {new Date().getFullYear()} Hyper-Gadgets. Tous droits réservés.</p>
         </div>
       </div>
     </footer>

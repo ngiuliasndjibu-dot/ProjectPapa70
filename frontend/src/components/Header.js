@@ -56,7 +56,7 @@ export const Header = () => {
               <Package className="w-6 h-6 text-white" />
             </div>
             <span className="font-bold text-xl tracking-tight hidden sm:block">
-              Tech<span className="text-[#0066FF]">Gadgets</span>
+              Hyper-<span className="text-[#0066FF]">Gadgets</span>
             </span>
           </Link>
 

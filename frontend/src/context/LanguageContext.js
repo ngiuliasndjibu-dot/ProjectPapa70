@@ -109,7 +109,7 @@ const resources = {
       removeFromWishlist: "Retirer des favoris",
       
       // Chat
-      chatTitle: "Assistant TechGadgets",
+      chatTitle: "Assistant Hyper-Gadgets",
       chatPlaceholder: "Posez votre question...",
       chatWelcome: "Bonjour! Comment puis-je vous aider?"
     }
@@ -219,7 +219,7 @@ const resources = {
       removeFromWishlist: "Remove from Wishlist",
       
       // Chat
-      chatTitle: "TechGadgets Assistant",
+      chatTitle: "Hyper-Gadgets Assistant",
       chatPlaceholder: "Ask your question...",
       chatWelcome: "Hello! How can I help you?"
     }

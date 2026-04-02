@@ -94,7 +94,7 @@ async def get_optional_user(request: Request) -> Optional[dict]:
         return None
 
 # FastAPI App
-app = FastAPI(title="TechGadgets E-Commerce API")
+app = FastAPI(title="Hyper-Gadgets E-Commerce API")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -867,7 +867,7 @@ async def update_order_status(order_id: str, status: str = Query(...), note: str
         try:
             twilio_client = TwilioClient(os.environ.get("TWILIO_ACCOUNT_SID"), os.environ.get("TWILIO_AUTH_TOKEN"))
             twilio_client.messages.create(
-                body=f"TechGadgets: Votre commande {order['order_number']} est maintenant: {status}",
+                body=f"Hyper-Gadgets: Votre commande {order['order_number']} est maintenant: {status}",
                 from_=os.environ.get("TWILIO_PHONE_NUMBER"),
                 to=order["user_phone"]
             )
@@ -1077,7 +1077,7 @@ async def initiate_mobile_money(
     try:
         twilio_client = TwilioClient(os.environ.get("TWILIO_ACCOUNT_SID"), os.environ.get("TWILIO_AUTH_TOKEN"))
         twilio_client.messages.create(
-            body=f"TechGadgets: Votre code OTP est {otp}. Valable 10 minutes.",
+            body=f"Hyper-Gadgets: Votre code OTP est {otp}. Valable 10 minutes.",
             from_=os.environ.get("TWILIO_PHONE_NUMBER"),
             to=phone_number
         )
@@ -1132,7 +1132,7 @@ async def chat_with_ai(message: ChatMessage, request: Request):
     products = await db.products.find({}, {"_id": 0, "name": 1, "price": 1, "category": 1}).limit(20).to_list(20)
     products_context = "\n".join([f"- {p['name']} ({p['category']}): ${p['price']}" for p in products])
     
-    system_message = f"""Tu es un assistant virtuel pour TechGadgets, une boutique en ligne de gadgets technologiques en RDC.
+    system_message = f"""Tu es un assistant virtuel pour Hyper-Gadgets, une boutique en ligne de gadgets technologiques en RDC.
 Tu aides les clients à trouver des produits, répondre aux questions sur les commandes, et fournir des informations sur la livraison.
 
 Produits disponibles:

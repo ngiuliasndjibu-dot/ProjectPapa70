@@ -84,7 +84,7 @@ export const LoginPage = () => {
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2">
             <div className="w-12 h-12 rounded-xl bg-[#0066FF] flex items-center justify-center">
-              <span className="text-white font-bold text-xl">TG</span>
+              <span className="text-white font-bold text-xl">HG</span>
             </div>
           </Link>
           <h1 className={`text-2xl font-bold mt-4 ${isDark ? 'text-white' : 'text-[#1A1A2E]'}`}>
