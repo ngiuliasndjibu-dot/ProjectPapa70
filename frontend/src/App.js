@@ -1,53 +1,207 @@
-import { useEffect } from "react";
+import React from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "sonner";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// Providers
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
+import { ThemeProvider } from "./context/ThemeContext";
+import { LanguageProvider } from "./context/LanguageContext";
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+// Components
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import Chatbot from "./components/Chatbot";
+import CartSheet from "./components/CartSheet";
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
+// Pages
+import HomePage from "./pages/HomePage";
+import ShopPage from "./pages/ShopPage";
+import ProductDetailPage from "./pages/ProductDetailPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import LoginPage from "./pages/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import AdminPage from "./pages/AdminPage";
 
+// Protected Route Component
+const ProtectedRoute = ({ children, adminOnly = false }) => {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-[#0066FF] border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (adminOnly && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+// Layout Component
+const Layout = ({ children }) => {
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-1">{children}</main>
+      <Footer />
+      <Chatbot />
+      <CartSheet />
     </div>
   );
 };
 
+// Auth Layout (no header/footer)
+const AuthLayout = ({ children }) => {
+  return <>{children}</>;
+};
+
+function AppContent() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Auth Routes */}
+        <Route
+          path="/login"
+          element={
+            <AuthLayout>
+              <LoginPage />
+            </AuthLayout>
+          }
+        />
+
+        {/* Main Routes */}
+        <Route
+          path="/"
+          element={
+            <Layout>
+              <HomePage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/shop"
+          element={
+            <Layout>
+              <ShopPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/product/:id"
+          element={
+            <Layout>
+              <ProductDetailPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/checkout"
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <CheckoutPage />
+              </ProtectedRoute>
+            </Layout>
+          }
+        />
+        <Route
+          path="/checkout/success"
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <CheckoutPage />
+              </ProtectedRoute>
+            </Layout>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            </Layout>
+          }
+        />
+        <Route
+          path="/orders"
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            </Layout>
+          }
+        />
+        <Route
+          path="/wishlist"
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            </Layout>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <Layout>
+              <ProtectedRoute adminOnly>
+                <AdminPage />
+              </ProtectedRoute>
+            </Layout>
+          }
+        />
+        <Route
+          path="/categories"
+          element={
+            <Layout>
+              <ShopPage />
+            </Layout>
+          }
+        />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <ThemeProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <CartProvider>
+            <AppContent />
+            <Toaster 
+              position="top-right" 
+              richColors 
+              closeButton
+              toastOptions={{
+                style: {
+                  background: 'var(--surface-dark)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                },
+              }}
+            />
+          </CartProvider>
+        </AuthProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 
