@@ -222,8 +222,6 @@ async def register(data: UserRegister, response: Response):
         raise HTTPException(status_code=400, detail="User already exists")
     
     user_doc = {
-        "email": data.email.lower() if data.email else None,
-        "phone": data.phone,
         "name": data.name,
         "password_hash": hash_password(data.password),
         "role": "customer",
@@ -231,6 +229,12 @@ async def register(data: UserRegister, response: Response):
         "wishlist": [],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    
+    # Only include email/phone if provided (sparse index requires absent field, not null)
+    if data.email:
+        user_doc["email"] = data.email.lower()
+    if data.phone:
+        user_doc["phone"] = data.phone
     
     result = await db.users.insert_one(user_doc)
     user_id = str(result.inserted_id)
@@ -243,8 +247,8 @@ async def register(data: UserRegister, response: Response):
     
     return {
         "id": user_id,
-        "email": user_doc["email"],
-        "phone": user_doc["phone"],
+        "email": user_doc.get("email"),
+        "phone": user_doc.get("phone"),
         "name": user_doc["name"],
         "role": user_doc["role"],
         "addresses": [],
@@ -1221,7 +1225,17 @@ async def get_all_users(page: int = 1, limit: int = 20, request: Request = None)
 
 @app.on_event("startup")
 async def startup_event():
-    # Create indexes
+    # Drop and recreate indexes to fix unique constraint issues
+    try:
+        await db.users.drop_index("email_1")
+    except:
+        pass
+    try:
+        await db.users.drop_index("phone_1")
+    except:
+        pass
+    
+    # Create indexes with sparse=True to allow multiple null values
     await db.users.create_index("email", unique=True, sparse=True)
     await db.users.create_index("phone", unique=True, sparse=True)
     await db.products.create_index("id", unique=True)
@@ -1237,7 +1251,6 @@ async def startup_event():
     if not existing:
         admin_doc = {
             "email": admin_email,
-            "phone": None,
             "name": "Admin",
             "password_hash": hash_password(admin_password),
             "role": "admin",
