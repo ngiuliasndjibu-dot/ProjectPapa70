@@ -22,8 +22,12 @@ import re
 # Twilio
 from twilio.rest import Client as TwilioClient
 
-# LLM Chat
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+# LLM Chat (OpenAI SDK)
+try:
+    from openai import AsyncOpenAI
+    openai_available = True
+except ImportError:
+    openai_available = False
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -1107,6 +1111,9 @@ async def verify_mobile_money(
 async def chat_with_ai(message: ChatMessage, request: Request):
     session_id = message.session_id or str(uuid.uuid4())
     
+    if not openai_available or not os.environ.get("OPENAI_API_KEY"):
+        return {"response": "Le chatbot est temporairement indisponible. Contactez-nous par téléphone.", "session_id": session_id}
+    
     # Get product context
     products = await db.products.find({}, {"_id": 0, "name": 1, "price": 1, "category": 1}).limit(20).to_list(20)
     products_context = "\n".join([f"- {p['name']} ({p['category']}): ${p['price']}" for p in products])
@@ -1122,15 +1129,27 @@ Livraison: Gratuite pour les commandes > $100.
 
 Réponds de manière concise et utile en français."""
 
-    chat = LlmChat(
-        api_key=os.environ.get("EMERGENT_LLM_KEY"),
-        session_id=session_id,
-        system_message=system_message
-    )
-    chat.with_model("openai", "gpt-5.2")
+    # Get recent chat history for context
+    history = await db.chat_history.find({"session_id": session_id}).sort("created_at", -1).limit(10).to_list(10)
+    history.reverse()
     
-    user_message = UserMessage(text=message.message)
-    response = await chat.send_message(user_message)
+    messages = [{"role": "system", "content": system_message}]
+    for h in history:
+        messages.append({"role": "user", "content": h["user_message"]})
+        messages.append({"role": "assistant", "content": h["bot_response"]})
+    messages.append({"role": "user", "content": message.message})
+    
+    try:
+        openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        completion = await openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            max_tokens=500
+        )
+        response = completion.choices[0].message.content
+    except Exception as e:
+        logging.error(f"OpenAI chat error: {e}")
+        response = "Désolé, une erreur est survenue. Veuillez réessayer."
     
     # Store chat history
     await db.chat_history.insert_one({
