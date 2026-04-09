@@ -211,6 +211,16 @@ class CategoryCreate(BaseModel):
     image: Optional[str] = None
     description: Optional[str] = None
 
+class BannerCreate(BaseModel):
+    title: str
+    subtitle: Optional[str] = None
+    image: Optional[str] = None
+    gradient: str = "from-[#0066FF] to-[#3385FF]"
+    link: Optional[str] = None
+    button_text: str = "Acheter maintenant"
+    is_active: bool = True
+    position: int = 0
+
 # ===================== AUTH ROUTES =====================
 
 @api_router.post("/auth/register")
@@ -529,6 +539,60 @@ async def delete_category(category_id: str, request: Request):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Categorie non trouvee")
     return {"message": "Categorie supprimee"}
+
+# ===================== BANNERS ROUTES =====================
+
+@api_router.get("/banners")
+async def get_banners():
+    banners = await db.banners.find({"is_active": True}, {"_id": 0}).sort("position", 1).to_list(20)
+    return banners
+
+@api_router.get("/admin/banners")
+async def get_all_banners(request: Request):
+    user = await get_current_user(request)
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    banners = await db.banners.find({}, {"_id": 0}).sort("position", 1).to_list(50)
+    return banners
+
+@api_router.post("/admin/banners")
+async def create_banner(banner: BannerCreate, request: Request):
+    user = await get_current_user(request)
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    doc = banner.model_dump()
+    doc["id"] = str(uuid.uuid4())
+    doc["created_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.banners.insert_one(doc)
+    del doc["_id"]
+    return doc
+
+@api_router.put("/admin/banners/{banner_id}")
+async def update_banner(banner_id: str, banner: BannerCreate, request: Request):
+    user = await get_current_user(request)
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    update_data = {k: v for k, v in banner.model_dump().items() if v is not None}
+    result = await db.banners.update_one({"id": banner_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Banniere non trouvee")
+    
+    updated = await db.banners.find_one({"id": banner_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/admin/banners/{banner_id}")
+async def delete_banner(banner_id: str, request: Request):
+    user = await get_current_user(request)
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await db.banners.delete_one({"id": banner_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Banniere non trouvee")
+    return {"message": "Banniere supprimee"}
 
 # ===================== PRODUCTS ROUTES =====================
 
@@ -1581,6 +1645,49 @@ async def startup_event():
 - WELCOME10: 10% off (min $50)
 - TECH20: 20% off (min $200)
 """)
+    
+    # Seed default banners
+    banners_count = await db.banners.count_documents({})
+    if banners_count == 0:
+        default_banners = [
+            {
+                "id": str(uuid.uuid4()),
+                "title": "VENTE FLASH",
+                "subtitle": "Jusqu'a -50% sur les smartphones",
+                "image": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800",
+                "gradient": "from-[#FF3B30] to-[#FF6B5B]",
+                "link": "/shop?category=smartphones",
+                "button_text": "Acheter maintenant",
+                "is_active": True,
+                "position": 0,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "title": "NOUVEAUTES",
+                "subtitle": "Decouvrez les derniers gadgets tech",
+                "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800",
+                "gradient": "from-[#0066FF] to-[#3385FF]",
+                "link": "/shop",
+                "button_text": "Decouvrir",
+                "is_active": True,
+                "position": 1,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "title": "LIVRAISON GRATUITE",
+                "subtitle": "Pour toute commande > $100",
+                "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800",
+                "gradient": "from-[#00C853] to-[#69F0AE]",
+                "link": "/shop",
+                "button_text": "En profiter",
+                "is_active": True,
+                "position": 2,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+        ]
+        await db.banners.insert_many(default_banners)
     
     logging.info("Startup complete - data seeded")
 

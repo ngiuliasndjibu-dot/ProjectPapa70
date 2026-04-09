@@ -167,46 +167,32 @@ export const HomePage = () => {
   const navigate = useNavigate();
   const [allProducts, setAllProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentBanner, setCurrentBanner] = useState(0);
 
-  const banners = [
-    {
-      title: "FLASH SALE",
-      subtitle: "Jusqu'à -50% sur les smartphones",
-      bg: "from-[#FF3B30] to-[#FF6B5B]",
-      image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800"
-    },
-    {
-      title: "NOUVEAUTÉS",
-      subtitle: "Découvrez les derniers gadgets tech",
-      bg: "from-[#0066FF] to-[#3385FF]",
-      image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800"
-    },
-    {
-      title: "LIVRAISON GRATUITE",
-      subtitle: "Pour toute commande > $100",
-      bg: "from-[#00C853] to-[#69F0AE]",
-      image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800"
-    }
-  ];
-
   useEffect(() => {
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (banners.length === 0) return;
     const bannerInterval = setInterval(() => {
       setCurrentBanner(prev => (prev + 1) % banners.length);
     }, 5000);
     return () => clearInterval(bannerInterval);
-  }, []);
+  }, [banners]);
 
   const fetchData = async () => {
     try {
-      const [productsRes, catRes] = await Promise.all([
+      const [productsRes, catRes, bannersRes] = await Promise.all([
         axios.get(`${API_URL}/api/products?limit=50`),
-        axios.get(`${API_URL}/api/categories`)
+        axios.get(`${API_URL}/api/categories`),
+        axios.get(`${API_URL}/api/banners`)
       ]);
       setAllProducts(productsRes.data.products || []);
       setCategories(catRes.data || []);
+      setBanners(bannersRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -245,25 +231,25 @@ export const HomePage = () => {
           <div className="lg:col-span-3 relative rounded-2xl overflow-hidden h-[300px] lg:h-[400px]">
             {banners.map((banner, idx) => (
               <motion.div
-                key={idx}
+                key={banner.id || idx}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: currentBanner === idx ? 1 : 0 }}
                 transition={{ duration: 0.5 }}
-                className={`absolute inset-0 bg-gradient-to-r ${banner.bg} flex items-center`}
+                className={`absolute inset-0 bg-gradient-to-r ${banner.gradient || 'from-[#0066FF] to-[#3385FF]'} flex items-center`}
                 style={{ zIndex: currentBanner === idx ? 1 : 0 }}
               >
                 <div className="flex-1 p-8 lg:p-12">
                   <Badge className="bg-white/20 text-white mb-4">{banner.title}</Badge>
                   <h1 className="text-3xl lg:text-5xl font-bold text-white mb-4">{banner.subtitle}</h1>
                   <Button 
-                    onClick={() => navigate('/shop')}
+                    onClick={() => navigate(banner.link || '/shop')}
                     className="bg-white text-gray-900 hover:bg-gray-100 rounded-full px-8"
                   >
-                    Acheter maintenant <ArrowRight className="w-4 h-4 ml-2" />
+                    {banner.button_text || 'Acheter maintenant'} <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
                 <div className="hidden lg:block w-1/3 h-full relative">
-                  <img src={banner.image} alt="" className="absolute right-0 bottom-0 h-full object-contain" />
+                  {banner.image && <img src={banner.image} alt="" className="absolute right-0 bottom-0 h-full object-contain" />}
                 </div>
               </motion.div>
             ))}

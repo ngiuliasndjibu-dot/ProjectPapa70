@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, Tag, FolderOpen,
-  Plus, Edit, Trash2, Search, Eye, Upload, X, Image, Loader2
+  Plus, Edit, Trash2, Search, Eye, Upload, X, Image, Loader2, Megaphone
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -156,6 +156,7 @@ export const AdminPage = () => {
   const [users, setUsers] = useState([]);
   const [promoCodes, setPromoCodes] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -176,6 +177,14 @@ export const AdminPage = () => {
     name: '', name_en: '', slug: '', image: '', description: ''
   });
 
+  // Banner form
+  const [bannerDialogOpen, setBannerDialogOpen] = useState(false);
+  const [editingBanner, setEditingBanner] = useState(null);
+  const [bannerForm, setBannerForm] = useState({
+    title: '', subtitle: '', image: '', gradient: 'from-[#0066FF] to-[#3385FF]',
+    link: '/shop', button_text: 'Acheter maintenant', is_active: true, position: 0
+  });
+
   // Promo form
   const [promoDialogOpen, setPromoDialogOpen] = useState(false);
   const [promoForm, setPromoForm] = useState({
@@ -193,13 +202,14 @@ export const AdminPage = () => {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [statsRes, ordersRes, productsRes, usersRes, promosRes, catsRes] = await Promise.all([
+      const [statsRes, ordersRes, productsRes, usersRes, promosRes, catsRes, bannersRes] = await Promise.all([
         axios.get(`${API_URL}/api/admin/stats`, { withCredentials: true }),
         axios.get(`${API_URL}/api/admin/orders`, { withCredentials: true }),
         axios.get(`${API_URL}/api/products?limit=100`),
         axios.get(`${API_URL}/api/admin/users`, { withCredentials: true }),
         axios.get(`${API_URL}/api/admin/promo-codes`, { withCredentials: true }),
-        axios.get(`${API_URL}/api/categories`)
+        axios.get(`${API_URL}/api/categories`),
+        axios.get(`${API_URL}/api/admin/banners`, { withCredentials: true })
       ]);
       setStats(statsRes.data);
       setOrders(ordersRes.data.orders || []);
@@ -207,6 +217,7 @@ export const AdminPage = () => {
       setUsers(usersRes.data.users || []);
       setPromoCodes(promosRes.data || []);
       setCategories(catsRes.data || []);
+      setBanners(bannersRes.data || []);
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
@@ -341,6 +352,58 @@ export const AdminPage = () => {
     setCategoryForm({ name: '', name_en: '', slug: '', image: '', description: '' });
   };
 
+  // ===================== BANNER HANDLERS =====================
+  const handleSaveBanner = async () => {
+    try {
+      if (editingBanner) {
+        await axios.put(`${API_URL}/api/admin/banners/${editingBanner.id}`, bannerForm, { withCredentials: true });
+        toast.success('Banniere mise a jour');
+      } else {
+        await axios.post(`${API_URL}/api/admin/banners`, bannerForm, { withCredentials: true });
+        toast.success('Banniere creee');
+      }
+      setBannerDialogOpen(false);
+      setEditingBanner(null);
+      resetBannerForm();
+      fetchAll();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur');
+    }
+  };
+
+  const handleDeleteBanner = async (bannerId) => {
+    if (!window.confirm('Supprimer cette banniere?')) return;
+    try {
+      await axios.delete(`${API_URL}/api/admin/banners/${bannerId}`, { withCredentials: true });
+      toast.success('Banniere supprimee');
+      fetchAll();
+    } catch (error) {
+      toast.error('Erreur');
+    }
+  };
+
+  const editBanner = (banner) => {
+    setEditingBanner(banner);
+    setBannerForm({
+      title: banner.title,
+      subtitle: banner.subtitle || '',
+      image: banner.image || '',
+      gradient: banner.gradient || 'from-[#0066FF] to-[#3385FF]',
+      link: banner.link || '/shop',
+      button_text: banner.button_text || 'Acheter maintenant',
+      is_active: banner.is_active !== false,
+      position: banner.position || 0
+    });
+    setBannerDialogOpen(true);
+  };
+
+  const resetBannerForm = () => {
+    setBannerForm({
+      title: '', subtitle: '', image: '', gradient: 'from-[#0066FF] to-[#3385FF]',
+      link: '/shop', button_text: 'Acheter maintenant', is_active: true, position: 0
+    });
+  };
+
   // ===================== PROMO HANDLERS =====================
   const handleCreatePromo = async () => {
     try {
@@ -386,6 +449,7 @@ export const AdminPage = () => {
             <TabsTrigger value="orders"><ShoppingCart className="w-4 h-4 mr-2" />Commandes</TabsTrigger>
             <TabsTrigger value="products"><Package className="w-4 h-4 mr-2" />Produits</TabsTrigger>
             <TabsTrigger value="categories" data-testid="categories-tab"><FolderOpen className="w-4 h-4 mr-2" />Categories</TabsTrigger>
+            <TabsTrigger value="banners" data-testid="banners-tab"><Megaphone className="w-4 h-4 mr-2" />Bannieres</TabsTrigger>
             <TabsTrigger value="users"><Users className="w-4 h-4 mr-2" />Utilisateurs</TabsTrigger>
             <TabsTrigger value="promos"><Tag className="w-4 h-4 mr-2" />Promos</TabsTrigger>
           </TabsList>
@@ -725,6 +789,128 @@ export const AdminPage = () => {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* ===================== BANNERS TAB ===================== */}
+          <TabsContent value="banners">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : ''}`}>{banners.length} bannieres</h2>
+              <Dialog open={bannerDialogOpen} onOpenChange={(open) => { setBannerDialogOpen(open); if (!open) { setEditingBanner(null); resetBannerForm(); } }}>
+                <DialogTrigger asChild>
+                  <Button className="rounded-full bg-[#0066FF]" data-testid="add-banner-btn">
+                    <Plus className="w-4 h-4 mr-2" />Ajouter une banniere
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className={`max-w-2xl ${isDark ? 'bg-[#252542] border-white/10' : ''}`}>
+                  <DialogHeader>
+                    <DialogTitle className={isDark ? 'text-white' : ''}>{editingBanner ? 'Modifier la banniere' : 'Nouvelle banniere'}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className={isDark ? 'text-gray-300' : ''}>Titre *</Label>
+                        <Input value={bannerForm.title} onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })} placeholder="VENTE FLASH" className={isDark ? 'bg-[#1A1A2E] border-white/10' : ''} data-testid="banner-title" />
+                      </div>
+                      <div>
+                        <Label className={isDark ? 'text-gray-300' : ''}>Texte du bouton</Label>
+                        <Input value={bannerForm.button_text} onChange={(e) => setBannerForm({ ...bannerForm, button_text: e.target.value })} className={isDark ? 'bg-[#1A1A2E] border-white/10' : ''} />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className={isDark ? 'text-gray-300' : ''}>Sous-titre</Label>
+                      <Input value={bannerForm.subtitle} onChange={(e) => setBannerForm({ ...bannerForm, subtitle: e.target.value })} placeholder="Jusqu'a -50% sur les smartphones" className={isDark ? 'bg-[#1A1A2E] border-white/10' : ''} data-testid="banner-subtitle" />
+                    </div>
+                    <div>
+                      <Label className={isDark ? 'text-gray-300' : ''}>URL de l'image</Label>
+                      <Input value={bannerForm.image} onChange={(e) => setBannerForm({ ...bannerForm, image: e.target.value })} placeholder="https://... ou /uploads/..." className={isDark ? 'bg-[#1A1A2E] border-white/10' : ''} />
+                      {bannerForm.image && (
+                        <img src={bannerForm.image} alt="Preview" className="w-full h-24 mt-2 rounded-lg object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className={isDark ? 'text-gray-300' : ''}>Lien (page de destination)</Label>
+                        <Input value={bannerForm.link} onChange={(e) => setBannerForm({ ...bannerForm, link: e.target.value })} placeholder="/shop?category=smartphones" className={isDark ? 'bg-[#1A1A2E] border-white/10' : ''} />
+                      </div>
+                      <div>
+                        <Label className={isDark ? 'text-gray-300' : ''}>Position (ordre)</Label>
+                        <Input type="number" value={bannerForm.position} onChange={(e) => setBannerForm({ ...bannerForm, position: parseInt(e.target.value) || 0 })} className={isDark ? 'bg-[#1A1A2E] border-white/10' : ''} />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className={isDark ? 'text-gray-300' : ''}>Couleur du degrade</Label>
+                      <Select value={bannerForm.gradient} onValueChange={(v) => setBannerForm({ ...bannerForm, gradient: v })}>
+                        <SelectTrigger className={isDark ? 'bg-[#1A1A2E] border-white/10' : ''}><SelectValue /></SelectTrigger>
+                        <SelectContent className={isDark ? 'bg-[#252542] border-white/10' : ''}>
+                          <SelectItem value="from-[#FF3B30] to-[#FF6B5B]">Rouge</SelectItem>
+                          <SelectItem value="from-[#0066FF] to-[#3385FF]">Bleu</SelectItem>
+                          <SelectItem value="from-[#00C853] to-[#69F0AE]">Vert</SelectItem>
+                          <SelectItem value="from-[#9C27B0] to-[#CE93D8]">Violet</SelectItem>
+                          <SelectItem value="from-[#FF6B00] to-[#FFB300]">Orange</SelectItem>
+                          <SelectItem value="from-[#1A1A2E] to-[#252542]">Sombre</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={bannerForm.is_active} onChange={(e) => setBannerForm({ ...bannerForm, is_active: e.target.checked })} className="rounded" />
+                      <span className={isDark ? 'text-gray-300' : ''}>Banniere active (visible sur la page d'accueil)</span>
+                    </div>
+                    
+                    {/* Preview */}
+                    <div>
+                      <Label className={isDark ? 'text-gray-300' : ''}>Apercu</Label>
+                      <div className={`relative rounded-xl overflow-hidden h-32 bg-gradient-to-r ${bannerForm.gradient} flex items-center p-6`}>
+                        <div className="flex-1">
+                          <p className="text-white/80 text-xs font-bold">{bannerForm.title || 'TITRE'}</p>
+                          <p className="text-white font-bold text-lg">{bannerForm.subtitle || 'Sous-titre'}</p>
+                          <span className="text-xs bg-white text-gray-900 px-2 py-1 rounded-full mt-1 inline-block">{bannerForm.button_text}</span>
+                        </div>
+                        {bannerForm.image && <img src={bannerForm.image} alt="" className="h-full object-contain" />}
+                      </div>
+                    </div>
+
+                    <Button onClick={handleSaveBanner} className="w-full rounded-full bg-[#0066FF]" data-testid="save-banner-btn">
+                      {editingBanner ? 'Mettre a jour' : 'Creer la banniere'}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="space-y-4">
+              {banners.map((banner) => (
+                <Card key={banner.id} className={`overflow-hidden ${isDark ? 'bg-[#252542] border-white/10' : ''}`}>
+                  <div className={`relative h-36 bg-gradient-to-r ${banner.gradient || 'from-[#0066FF] to-[#3385FF]'} flex items-center px-6`}>
+                    <div className="flex-1">
+                      <Badge className="bg-white/20 text-white text-xs mb-1">{banner.title}</Badge>
+                      <p className="text-white font-bold text-xl">{banner.subtitle}</p>
+                      <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full mt-1 inline-block">{banner.button_text}</span>
+                    </div>
+                    {banner.image && <img src={banner.image} alt="" className="h-full object-contain" />}
+                    {!banner.is_active && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <span className="text-white font-bold bg-red-500 px-3 py-1 rounded">INACTIVE</span>
+                      </div>
+                    )}
+                  </div>
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <Badge className={banner.is_active ? 'bg-green-500' : 'bg-red-500'}>{banner.is_active ? 'Active' : 'Inactive'}</Badge>
+                      <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Position: {banner.position}</span>
+                      <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Lien: {banner.link || '-'}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => editBanner(banner)} data-testid={`edit-banner-${banner.id}`}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteBanner(banner.id)} className="text-red-500" data-testid={`delete-banner-${banner.id}`}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
