@@ -1,0 +1,21 @@
+[Unit]
+Description=Hyper-Gadgets Backend API
+After=network.target mongod.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/hyper-gadgets/backend
+Environment="PATH=/var/www/hyper-gadgets/backend/venv/bin"
+EnvironmentFile=/var/www/hyper-gadgets/backend/.env
+ExecStart=/var/www/hyper-gadgets/backend/venv/bin/gunicorn server:app \
+    --workers 4 \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --bind 127.0.0.1:8001 \
+    --access-logfile /var/log/hypergadgets/access.log \
+    --error-logfile /var/log/hypergadgets/error.log
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
