@@ -4,7 +4,8 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query, UploadFile, File
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
@@ -18,6 +19,11 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
 import uuid
 import re
+import shutil
+
+# Upload directory
+UPLOAD_DIR = ROOT_DIR / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 # Twilio
 from twilio.rest import Client as TwilioClient
@@ -96,6 +102,9 @@ async def get_optional_user(request: Request) -> Optional[dict]:
 
 # FastAPI App
 app = FastAPI(title="Hyper-Gadgets E-Commerce API")
+
+# Serve uploaded files as static
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -406,6 +415,63 @@ async def get_wishlist(request: Request):
     
     return products
 
+# ===================== FILE UPLOAD =====================
+
+@api_router.post("/upload")
+async def upload_file(file: UploadFile = File(...), request: Request = None):
+    user = await get_current_user(request)
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Type de fichier non autorise. Utilisez JPG, PNG, WebP ou GIF.")
+    
+    # Validate file size (max 5MB)
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Fichier trop volumineux (max 5MB)")
+    
+    # Generate unique filename
+    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    filepath = UPLOAD_DIR / filename
+    
+    with open(filepath, "wb") as f:
+        f.write(contents)
+    
+    # Return URL relative to server
+    return {"url": f"/uploads/{filename}", "filename": filename}
+
+@api_router.post("/upload/multiple")
+async def upload_multiple_files(files: List[UploadFile] = File(...), request: Request = None):
+    user = await get_current_user(request)
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    urls = []
+    
+    for file in files:
+        if file.content_type not in allowed_types:
+            continue
+        
+        contents = await file.read()
+        if len(contents) > 5 * 1024 * 1024:
+            continue
+        
+        ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        filepath = UPLOAD_DIR / filename
+        
+        with open(filepath, "wb") as f:
+            f.write(contents)
+        
+        urls.append({"url": f"/uploads/{filename}", "filename": filename})
+    
+    return {"uploaded": urls, "count": len(urls)}
+
 # ===================== CATEGORIES ROUTES =====================
 
 @api_router.get("/categories")
@@ -419,12 +485,50 @@ async def create_category(category: CategoryCreate, request: Request):
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
+    # Check slug uniqueness
+    existing = await db.categories.find_one({"slug": category.slug})
+    if existing:
+        raise HTTPException(status_code=400, detail="Une categorie avec ce slug existe deja")
+    
     cat_doc = category.model_dump()
     cat_doc["id"] = str(uuid.uuid4())
     cat_doc["created_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.categories.insert_one(cat_doc)
+    del cat_doc["_id"]
     return cat_doc
+
+@api_router.put("/admin/categories/{category_id}")
+async def update_category(category_id: str, category: CategoryCreate, request: Request):
+    user = await get_current_user(request)
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    update_data = {k: v for k, v in category.model_dump().items() if v is not None}
+    result = await db.categories.update_one({"id": category_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Categorie non trouvee")
+    
+    updated = await db.categories.find_one({"id": category_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/admin/categories/{category_id}")
+async def delete_category(category_id: str, request: Request):
+    user = await get_current_user(request)
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Check if products use this category
+    cat = await db.categories.find_one({"id": category_id})
+    if cat:
+        products_count = await db.products.count_documents({"category": cat["slug"]})
+        if products_count > 0:
+            raise HTTPException(status_code=400, detail=f"Impossible de supprimer: {products_count} produit(s) utilisent cette categorie")
+    
+    result = await db.categories.delete_one({"id": category_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Categorie non trouvee")
+    return {"message": "Categorie supprimee"}
 
 # ===================== PRODUCTS ROUTES =====================
 
