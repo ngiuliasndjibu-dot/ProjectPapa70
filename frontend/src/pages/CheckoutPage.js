@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
-  CreditCard, Smartphone, Truck, MapPin, Check, ChevronRight, 
-  ArrowLeft, Loader2, AlertCircle
+  Smartphone, Truck, MapPin, Check, ChevronRight, 
+  ArrowLeft, Loader2, AlertCircle, CreditCard
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -24,7 +24,6 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export const CheckoutPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { isDark } = useTheme();
   const { cart, fetchCart, clearCart } = useCart();
   const { user, isAuthenticated } = useAuth();
@@ -49,12 +48,14 @@ export const CheckoutPage = () => {
   });
 
   // Payment
-  const [paymentMethod, setPaymentMethod] = useState('stripe');
+  const [paymentMethod, setPaymentMethod] = useState('paypal');
   const [mobileMoneyProvider, setMobileMoneyProvider] = useState('mpesa');
-  const [mobileMoneyPhone, setMobileMoneyPhone] = useState(user?.phone || '');
+  const [mobileMoneyPhone, setMobileMoneyPhone] = useState(user?.phone || '+243');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [transactionId, setTransactionId] = useState('');
+  const [otpCountdown, setOtpCountdown] = useState(0);
+  const [maskedPhone, setMaskedPhone] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -64,35 +65,14 @@ export const CheckoutPage = () => {
     fetchCart();
   }, [isAuthenticated]);
 
-  // Check for Stripe success
+  // OTP countdown timer
   useEffect(() => {
-    const sessionId = searchParams.get('session_id');
-    if (sessionId) {
-      pollStripeStatus(sessionId);
-    }
-  }, [searchParams]);
+    if (otpCountdown <= 0) return;
+    const timer = setTimeout(() => setOtpCountdown(otpCountdown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [otpCountdown]);
 
-  const pollStripeStatus = async (sessionId, attempts = 0) => {
-    if (attempts >= 5) {
-      toast.error('Timeout lors de la vérification du paiement');
-      return;
-    }
-
-    try {
-      const response = await axios.get(`${API_URL}/api/payments/stripe/status/${sessionId}`);
-      if (response.data.payment_status === 'paid') {
-        toast.success('Paiement réussi!');
-        await clearCart();
-        navigate('/orders');
-      } else if (response.data.status === 'expired') {
-        toast.error('Session expirée');
-      } else {
-        setTimeout(() => pollStripeStatus(sessionId, attempts + 1), 2000);
-      }
-    } catch (error) {
-      console.error('Error checking payment status:', error);
-    }
-  };
+// OTP countdown timer removed Stripe polling
 
   const applyPromoCode = async () => {
     if (!promoCode) return;
@@ -121,45 +101,52 @@ export const CheckoutPage = () => {
     }
   };
 
-  const handleStripeCheckout = async () => {
-    setLoading(true);
-    try {
-      const originUrl = window.location.origin;
-      const response = await axios.post(
-        `${API_URL}/api/payments/stripe/create-session?origin_url=${encodeURIComponent(originUrl)}`,
-        {},
-        { withCredentials: true }
-      );
-      
-      if (response.data.url) {
-        window.location.href = response.data.url;
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erreur de paiement');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleMobileMoneyInitiate = async () => {
     if (!mobileMoneyPhone) {
       toast.error('Veuillez entrer votre numéro');
       return;
     }
 
+    const cleaned = mobileMoneyPhone.replace(/[\s\-]/g, '');
+    if (!/^\+?243\d{9}$/.test(cleaned)) {
+      toast.error('Format invalide. Utilisez +243XXXXXXXXX');
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await axios.post(
-        `${API_URL}/api/payments/mobile-money/initiate?provider=${mobileMoneyProvider}&phone_number=${encodeURIComponent(mobileMoneyPhone)}`,
+        `${API_URL}/api/payments/mobile-money/initiate?provider=${mobileMoneyProvider}&phone_number=${encodeURIComponent(cleaned)}`,
         {},
         { withCredentials: true }
       );
       
       setTransactionId(response.data.transaction_id);
+      setMaskedPhone(response.data.phone_number || cleaned);
       setOtpSent(true);
-      toast.success('Code OTP envoyé!');
+      setOtpCountdown(60);
+      toast.success('Code OTP envoyé par SMS!');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erreur');
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'envoi du code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (otpCountdown > 0) return;
+    setLoading(true);
+    try {
+      await axios.post(
+        `${API_URL}/api/payments/mobile-money/resend-otp?transaction_id=${transactionId}`,
+        {},
+        { withCredentials: true }
+      );
+      setOtpCountdown(60);
+      setOtp('');
+      toast.success('Nouveau code OTP envoyé!');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors du renvoi');
     } finally {
       setLoading(false);
     }
@@ -364,20 +351,6 @@ export const CheckoutPage = () => {
                   </CardHeader>
                   <CardContent>
                     <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-4">
-                      {/* Stripe */}
-                      <label className={`flex items-center gap-4 p-4 rounded-xl cursor-pointer border-2 transition-all ${
-                        paymentMethod === 'stripe' 
-                          ? 'border-[#0066FF] bg-[#0066FF]/10' 
-                          : isDark ? 'border-white/10 hover:border-white/20' : 'border-gray-200 hover:border-gray-300'
-                      }`}>
-                        <RadioGroupItem value="stripe" />
-                        <CreditCard className="w-6 h-6 text-[#0066FF]" />
-                        <div className="flex-1">
-                          <p className={`font-medium ${isDark ? 'text-white' : ''}`}>{t('creditCard')}</p>
-                          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Visa, Mastercard, Amex</p>
-                        </div>
-                      </label>
-
                       {/* PayPal */}
                       <label className={`flex items-center gap-4 p-4 rounded-xl cursor-pointer border-2 transition-all ${
                         paymentMethod === 'paypal' 
@@ -429,7 +402,8 @@ export const CheckoutPage = () => {
                           {mobileMoneyProviders.map((provider) => (
                             <button
                               key={provider.id}
-                              onClick={() => setMobileMoneyProvider(provider.id)}
+                              onClick={() => { setMobileMoneyProvider(provider.id); setOtpSent(false); setOtp(''); }}
+                              data-testid={`provider-${provider.id}`}
                               className={`p-3 rounded-xl flex items-center justify-center gap-2 border-2 transition-all ${
                                 mobileMoneyProvider === provider.id 
                                   ? 'border-[#0066FF] bg-[#0066FF]/10' 
@@ -443,25 +417,67 @@ export const CheckoutPage = () => {
                         </div>
 
                         <div>
-                          <Label className={isDark ? 'text-gray-300' : ''}>Numéro de téléphone</Label>
+                          <Label className={isDark ? 'text-gray-300' : ''}>Numéro de téléphone (RDC)</Label>
                           <Input
                             value={mobileMoneyPhone}
                             onChange={(e) => setMobileMoneyPhone(e.target.value)}
-                            placeholder="+243..."
+                            placeholder="+243XXXXXXXXX"
                             className={isDark ? 'bg-[#1A1A2E] border-white/10' : ''}
+                            data-testid="mobile-money-phone"
+                            disabled={otpSent}
                           />
+                          <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            Format: +243 suivi de 9 chiffres
+                          </p>
                         </div>
 
                         {otpSent && (
-                          <div>
-                            <Label className={isDark ? 'text-gray-300' : ''}>Code OTP</Label>
+                          <div className={`p-4 rounded-xl border ${isDark ? 'bg-[#1A1A2E] border-white/10' : 'bg-green-50 border-green-200'}`}>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Check className="w-4 h-4 text-[#00C853]" />
+                              <span className={`text-sm font-medium ${isDark ? 'text-green-400' : 'text-green-700'}`}>
+                                Code envoyé au {maskedPhone}
+                              </span>
+                            </div>
+                            <Label className={isDark ? 'text-gray-300' : ''}>Code OTP (6 chiffres)</Label>
                             <Input
                               value={otp}
-                              onChange={(e) => setOtp(e.target.value)}
-                              placeholder="Entrez le code reçu"
-                              className={isDark ? 'bg-[#1A1A2E] border-white/10' : ''}
+                              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                              placeholder="______"
+                              maxLength={6}
+                              className={`text-center text-2xl tracking-[0.5em] font-mono ${isDark ? 'bg-[#252542] border-white/10' : ''}`}
+                              data-testid="otp-input"
                             />
+                            <div className="flex items-center justify-between mt-2">
+                              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                Expire dans 10 minutes
+                              </p>
+                              <button
+                                onClick={handleResendOtp}
+                                disabled={otpCountdown > 0 || loading}
+                                className={`text-xs font-medium ${
+                                  otpCountdown > 0 
+                                    ? isDark ? 'text-gray-600' : 'text-gray-400' 
+                                    : 'text-[#0066FF] hover:underline cursor-pointer'
+                                }`}
+                                data-testid="resend-otp"
+                              >
+                                {otpCountdown > 0 ? `Renvoyer dans ${otpCountdown}s` : 'Renvoyer le code'}
+                              </button>
+                            </div>
                           </div>
+                        )}
+
+                        {!otpSent && (
+                          <Button
+                            onClick={handleMobileMoneyInitiate}
+                            disabled={loading || !mobileMoneyPhone}
+                            className="w-full rounded-full bg-[#00C853] hover:bg-[#00A843] h-12"
+                            data-testid="send-otp-btn"
+                          >
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Smartphone className="w-5 h-5 mr-2" />}
+                            Recevoir le code OTP
+                          </Button>
                         )}
                       </div>
                     )}
@@ -518,7 +534,6 @@ export const CheckoutPage = () => {
                     <div className={`p-4 rounded-xl ${isDark ? 'bg-[#1A1A2E]' : 'bg-gray-50'}`}>
                       <h4 className={`font-medium mb-2 ${isDark ? 'text-white' : ''}`}>Mode de paiement</h4>
                       <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                        {paymentMethod === 'stripe' && 'Carte bancaire (Stripe)'}
                         {paymentMethod === 'paypal' && 'PayPal'}
                         {paymentMethod === 'mobile_money' && `Mobile Money - ${mobileMoneyProviders.find(p => p.id === mobileMoneyProvider)?.name}`}
                         {paymentMethod === 'cod' && 'Paiement à la livraison'}
@@ -534,17 +549,6 @@ export const CheckoutPage = () => {
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Retour
                       </Button>
-
-                      {paymentMethod === 'stripe' && (
-                        <Button
-                          onClick={handleStripeCheckout}
-                          disabled={loading}
-                          className="flex-1 rounded-full bg-[#0066FF] hover:bg-[#3385FF] h-12"
-                          data-testid="pay-stripe"
-                        >
-                          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Payer avec Stripe'}
-                        </Button>
-                      )}
 
                       {paymentMethod === 'paypal' && (
                         <div className="flex-1">
@@ -569,11 +573,11 @@ export const CheckoutPage = () => {
                       {paymentMethod === 'mobile_money' && (
                         <Button
                           onClick={otpSent ? handleMobileMoneyVerify : handleMobileMoneyInitiate}
-                          disabled={loading}
+                          disabled={loading || (otpSent && otp.length !== 6)}
                           className="flex-1 rounded-full bg-[#00C853] hover:bg-[#00A843] h-12"
                           data-testid="pay-mobile-money"
                         >
-                          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : otpSent ? 'Vérifier le code' : 'Recevoir le code OTP'}
+                          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : otpSent ? 'Confirmer le paiement' : 'Recevoir le code OTP'}
                         </Button>
                       )}
 

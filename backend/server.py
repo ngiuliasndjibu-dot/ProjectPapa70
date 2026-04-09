@@ -22,9 +22,6 @@ import re
 # Twilio
 from twilio.rest import Client as TwilioClient
 
-# Stripe integration
-from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
-
 # LLM Chat
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
@@ -930,103 +927,7 @@ async def get_product_reviews(product_id: str, page: int = 1, limit: int = 10):
 
 # ===================== PAYMENTS =====================
 
-@api_router.post("/payments/stripe/create-session")
-async def create_stripe_session(request: Request, origin_url: str = Query(...)):
-    user = await get_current_user(request)
-    user_id = user["_id"]
-    
-    # Get cart total
-    cart = await db.carts.find_one({"user_id": user_id})
-    if not cart or not cart.get("items"):
-        raise HTTPException(status_code=400, detail="Cart is empty")
-    
-    subtotal = 0
-    for item in cart["items"]:
-        product = await db.products.find_one({"id": item["product_id"]})
-        if product:
-            subtotal += product["price"] * item["quantity"]
-    
-    shipping = 10.0 if subtotal < 100 else 0
-    total = subtotal + shipping
-    
-    stripe_checkout = StripeCheckout(
-        api_key=os.environ.get("STRIPE_API_KEY"),
-        webhook_url=f"{origin_url}/api/webhook/stripe"
-    )
-    
-    success_url = f"{origin_url}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}"
-    cancel_url = f"{origin_url}/checkout"
-    
-    checkout_request = CheckoutSessionRequest(
-        amount=float(total),
-        currency="usd",
-        success_url=success_url,
-        cancel_url=cancel_url,
-        metadata={"user_id": user_id, "type": "order"}
-    )
-    
-    session = await stripe_checkout.create_checkout_session(checkout_request)
-    
-    # Store payment transaction
-    await db.payment_transactions.insert_one({
-        "id": str(uuid.uuid4()),
-        "session_id": session.session_id,
-        "user_id": user_id,
-        "amount": total,
-        "currency": "usd",
-        "payment_method": "stripe",
-        "payment_status": "pending",
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
-    
-    return {"url": session.url, "session_id": session.session_id}
-
-@api_router.get("/payments/stripe/status/{session_id}")
-async def get_stripe_status(session_id: str):
-    stripe_checkout = StripeCheckout(
-        api_key=os.environ.get("STRIPE_API_KEY"),
-        webhook_url=""
-    )
-    
-    status = await stripe_checkout.get_checkout_status(session_id)
-    
-    # Update payment transaction
-    if status.payment_status == "paid":
-        await db.payment_transactions.update_one(
-            {"session_id": session_id},
-            {"$set": {"payment_status": "completed", "updated_at": datetime.now(timezone.utc).isoformat()}}
-        )
-    
-    return {
-        "status": status.status,
-        "payment_status": status.payment_status,
-        "amount_total": status.amount_total,
-        "currency": status.currency
-    }
-
-@api_router.post("/webhook/stripe")
-async def stripe_webhook(request: Request):
-    body = await request.body()
-    stripe_checkout = StripeCheckout(
-        api_key=os.environ.get("STRIPE_API_KEY"),
-        webhook_url=""
-    )
-    
-    try:
-        webhook_response = await stripe_checkout.handle_webhook(body, request.headers.get("Stripe-Signature"))
-        
-        if webhook_response.payment_status == "paid":
-            await db.payment_transactions.update_one(
-                {"session_id": webhook_response.session_id},
-                {"$set": {"payment_status": "completed", "updated_at": datetime.now(timezone.utc).isoformat()}}
-            )
-        
-        return {"status": "processed"}
-    except Exception as e:
-        logging.error(f"Stripe webhook error: {e}")
-        return {"status": "error"}
-
-# Mobile Money (simulated for RDC providers)
+# Mobile Money (RDC providers with OTP via Twilio)
 @api_router.post("/payments/mobile-money/initiate")
 async def initiate_mobile_money(
     provider: str = Query(...),
@@ -1038,12 +939,20 @@ async def initiate_mobile_money(
     
     valid_providers = ["airtel", "mpesa", "orange", "africell"]
     if provider not in valid_providers:
-        raise HTTPException(status_code=400, detail="Invalid provider")
+        raise HTTPException(status_code=400, detail="Opérateur invalide")
+    
+    # Validate RDC phone number format
+    cleaned_phone = re.sub(r'[\s\-]', '', phone_number)
+    if not re.match(r'^\+?243\d{9}$', cleaned_phone):
+        raise HTTPException(status_code=400, detail="Numéro invalide. Format: +243XXXXXXXXX")
+    
+    if not cleaned_phone.startswith('+'):
+        cleaned_phone = '+' + cleaned_phone
     
     # Get cart total
     cart = await db.carts.find_one({"user_id": user_id})
     if not cart or not cart.get("items"):
-        raise HTTPException(status_code=400, detail="Cart is empty")
+        raise HTTPException(status_code=400, detail="Le panier est vide")
     
     subtotal = 0
     for item in cart["items"]:
@@ -1053,6 +962,16 @@ async def initiate_mobile_money(
     
     shipping = 10.0 if subtotal < 100 else 0
     total = subtotal + shipping
+    
+    # Check cooldown (prevent OTP spam, 60s between requests)
+    recent = await db.payment_transactions.find_one({
+        "user_id": user_id,
+        "payment_method": "mobile_money",
+        "payment_status": "pending",
+        "created_at": {"$gte": (datetime.now(timezone.utc) - timedelta(seconds=60)).isoformat()}
+    })
+    if recent:
+        raise HTTPException(status_code=429, detail="Veuillez patienter 60 secondes avant de redemander un code")
     
     # Generate OTP
     otp = secrets.randbelow(900000) + 100000
@@ -1066,20 +985,22 @@ async def initiate_mobile_money(
         "currency": "USD",
         "payment_method": "mobile_money",
         "provider": provider,
-        "phone_number": phone_number,
+        "phone_number": cleaned_phone,
         "otp": str(otp),
+        "otp_attempts": 0,
         "payment_status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
     })
     
     # Send OTP via SMS
+    provider_names = {"airtel": "Airtel Money", "mpesa": "M-Pesa", "orange": "Orange Money", "africell": "Africell Money"}
     try:
         twilio_client = TwilioClient(os.environ.get("TWILIO_ACCOUNT_SID"), os.environ.get("TWILIO_AUTH_TOKEN"))
         twilio_client.messages.create(
-            body=f"Hyper-Gadgets: Votre code OTP est {otp}. Valable 10 minutes.",
+            body=f"Hyper-Gadgets: Votre code de paiement {provider_names.get(provider, provider)} est {otp}. Montant: ${total:.2f}. Valable 10 minutes.",
             from_=os.environ.get("TWILIO_PHONE_NUMBER"),
-            to=phone_number
+            to=cleaned_phone
         )
     except Exception as e:
         logging.error(f"SMS send failed: {e}")
@@ -1088,8 +1009,49 @@ async def initiate_mobile_money(
         "transaction_id": transaction_id,
         "amount": total,
         "provider": provider,
-        "message": f"OTP sent to {phone_number}"
+        "phone_number": cleaned_phone[-4:].rjust(len(cleaned_phone), '*'),
+        "message": f"Code OTP envoyé au {cleaned_phone[-4:].rjust(len(cleaned_phone), '*')}",
+        "expires_in": 600
     }
+
+@api_router.post("/payments/mobile-money/resend-otp")
+async def resend_mobile_money_otp(
+    transaction_id: str = Query(...),
+    request: Request = None
+):
+    user = await get_current_user(request)
+    
+    transaction = await db.payment_transactions.find_one({
+        "id": transaction_id,
+        "user_id": user["_id"],
+        "payment_status": "pending"
+    })
+    
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction non trouvée")
+    
+    if datetime.fromisoformat(transaction["expires_at"]) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Transaction expirée. Veuillez recommencer.")
+    
+    # Generate new OTP
+    new_otp = secrets.randbelow(900000) + 100000
+    await db.payment_transactions.update_one(
+        {"id": transaction_id},
+        {"$set": {"otp": str(new_otp), "otp_attempts": 0}}
+    )
+    
+    # Send new OTP via SMS
+    try:
+        twilio_client = TwilioClient(os.environ.get("TWILIO_ACCOUNT_SID"), os.environ.get("TWILIO_AUTH_TOKEN"))
+        twilio_client.messages.create(
+            body=f"Hyper-Gadgets: Nouveau code OTP: {new_otp}. Valable 10 minutes.",
+            from_=os.environ.get("TWILIO_PHONE_NUMBER"),
+            to=transaction["phone_number"]
+        )
+    except Exception as e:
+        logging.error(f"SMS resend failed: {e}")
+    
+    return {"message": "Nouveau code OTP envoyé", "transaction_id": transaction_id}
 
 @api_router.post("/payments/mobile-money/verify")
 async def verify_mobile_money(
@@ -1106,13 +1068,30 @@ async def verify_mobile_money(
     })
     
     if not transaction:
-        raise HTTPException(status_code=404, detail="Transaction not found")
+        raise HTTPException(status_code=404, detail="Transaction non trouvée")
     
     if datetime.fromisoformat(transaction["expires_at"]) < datetime.now(timezone.utc):
-        raise HTTPException(status_code=400, detail="OTP expired")
+        await db.payment_transactions.update_one(
+            {"id": transaction_id},
+            {"$set": {"payment_status": "expired"}}
+        )
+        raise HTTPException(status_code=400, detail="Code OTP expiré. Veuillez recommencer.")
+    
+    # Check max attempts (5)
+    if transaction.get("otp_attempts", 0) >= 5:
+        await db.payment_transactions.update_one(
+            {"id": transaction_id},
+            {"$set": {"payment_status": "failed"}}
+        )
+        raise HTTPException(status_code=400, detail="Trop de tentatives. Transaction annulée.")
     
     if transaction["otp"] != otp:
-        raise HTTPException(status_code=400, detail="Invalid OTP")
+        await db.payment_transactions.update_one(
+            {"id": transaction_id},
+            {"$inc": {"otp_attempts": 1}}
+        )
+        remaining = 5 - transaction.get("otp_attempts", 0) - 1
+        raise HTTPException(status_code=400, detail=f"Code invalide. {remaining} tentative(s) restante(s).")
     
     # Mark as completed
     await db.payment_transactions.update_one(
@@ -1138,7 +1117,7 @@ Tu aides les clients à trouver des produits, répondre aux questions sur les co
 Produits disponibles:
 {products_context}
 
-Méthodes de paiement: Stripe (cartes), PayPal, Mobile Money (Airtel, M-Pesa, Orange, Africell), Paiement à la livraison.
+Méthodes de paiement: PayPal, Mobile Money (Airtel, M-Pesa, Orange, Africell), Paiement à la livraison.
 Livraison: Gratuite pour les commandes > $100.
 
 Réponds de manière concise et utile en français."""
