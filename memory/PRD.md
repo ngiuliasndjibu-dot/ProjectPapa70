@@ -18,69 +18,62 @@ Creer un site e-commerce moderne "Hyper-Gadgets" pour gadgets technologiques, ci
 - [x] Page d'accueil style Amazon/AliExpress
 - [x] Catalogue produits avec filtres
 - [x] Page detail produit
-- [x] Panier (ajout, modification, suppression)
-- [x] Checkout complet (PayPal, Mobile Money, COD)
-- [x] Dashboard utilisateur
-- [x] Dashboard admin (stats, graphiques, CRUD)
-- [x] Chatbot IA (OpenAI SDK standard)
-- [x] Codes promo (WELCOME10, TECH20)
-- [x] SMS notifications via Twilio
-- [x] Sparse index MongoDB pour email/phone
+- [x] Panier + Checkout (PayPal, Mobile Money, COD)
+- [x] Dashboard utilisateur + Admin (stats, graphiques, CRUD)
+- [x] Chatbot IA (OpenAI SDK), Codes promo, SMS Twilio
 
 ### Phase 2 - Paiements (Complete - 09/04/2026)
 - [x] Stripe SUPPRIME
-- [x] PayPal sandbox
 - [x] Mobile Money RDC avec OTP ameliore (validation +243, countdown, resend, 5 tentatives max)
-- [x] Paiement a la livraison
 
 ### Phase 3 - Admin Ameliore (Complete - 09/04/2026)
 - [x] Upload d'images sur le serveur (single + multiple, max 5MB)
-- [x] CRUD Categories complet (ajouter, modifier, supprimer)
-- [x] Onglet Categories dans le dashboard admin
+- [x] CRUD Categories complet
 - [x] Formulaire produit avec upload multi-images
-- [x] Preview images avec suppression
-- [x] Support URL externe pour images
-- [x] Fichiers servis via /uploads/ (FastAPI StaticFiles + Nginx alias)
 
-### Phase 4 - Deploiement (Complete - 09/04/2026)
-- [x] Scripts deploiement IONOS VPS
-- [x] Guide DEPLOY_IONOS.md complet
-- [x] Config Nginx (reverse proxy, SSL, uploads)
-- [x] Service systemd (gunicorn + uvicorn)
-- [x] Docker Compose alternative
-- [x] Migration chatbot vers OpenAI SDK (compatible VPS)
+### Phase 4 - Bannieres Promotionnelles (Complete - 09/04/2026)
+- [x] CRUD Bannieres depuis le dashboard Admin
+- [x] Onglet "Bannieres" avec formulaire complet (titre, sous-titre, image, degrade, lien, bouton, position, actif/inactif)
+- [x] Apercu en temps reel dans le formulaire
+- [x] Page d'accueil charge les bannieres dynamiquement depuis l'API
+- [x] Carousel auto-rotatif (5s) avec dots de navigation
+- [x] 3 bannieres par defaut seedees au demarrage
+- [x] Seules les bannieres actives sont affichees cote public
+
+### Phase 5 - Deploiement (Complete - 09/04/2026)
+- [x] Scripts deploiement IONOS VPS complets
+- [x] Migration chatbot vers OpenAI SDK standard
+- [x] Config Nginx mise a jour (uploads, banners)
 
 ## Endpoints API
 
 ### Auth
-- POST /api/auth/register, /api/auth/login, /api/auth/logout, GET /api/auth/me
+POST /api/auth/register, /api/auth/login, /api/auth/logout, GET /api/auth/me
 
 ### Products
-- GET /api/products, /api/products/{id}, /api/products/search, /api/products/brands/list
+GET /api/products, /api/products/{id}, /api/products/search, /api/products/brands/list
 
-### Cart
-- GET /api/cart, POST /api/cart/add, PUT /api/cart/update, DELETE /api/cart/remove, /api/cart/clear
-
-### Orders
-- POST /api/orders, GET /api/orders, /api/orders/{id}, /api/orders/track/{order_number}
+### Cart & Orders
+GET /api/cart, POST /api/cart/add, /api/orders, GET /api/orders
 
 ### Payments
-- POST /api/payments/mobile-money/initiate, /api/payments/mobile-money/resend-otp, /api/payments/mobile-money/verify
+POST /api/payments/mobile-money/initiate, /resend-otp, /verify
 
 ### Upload
-- POST /api/upload (single), POST /api/upload/multiple
+POST /api/upload (single), POST /api/upload/multiple
+
+### Banners
+GET /api/banners (public, actives), GET /api/admin/banners (all)
+POST /api/admin/banners, PUT /api/admin/banners/{id}, DELETE /api/admin/banners/{id}
 
 ### Admin
-- GET /api/admin/stats, /api/admin/orders, /api/admin/users, /api/admin/promo-codes
-- POST/PUT/DELETE /api/admin/products, /api/admin/categories
-
-### Other
-- POST /api/chat, GET /api/categories, POST /api/reviews
+GET /api/admin/stats, /orders, /users, /promo-codes
+POST/PUT/DELETE /api/admin/products, /api/admin/categories
 
 ## Taches Futures / Backlog
 
 ### P1
-- [ ] Systeme de notifications en temps reel (WebSocket)
+- [ ] Notifications temps reel (WebSocket)
 
 ### P2
 - [ ] Historique de recherche, Comparaison produits, Export PDF commandes
