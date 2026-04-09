@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Smartphone, Truck, MapPin, Check, ChevronRight, 
-  ArrowLeft, Loader2, AlertCircle, CreditCard
+  ArrowLeft, Loader2, AlertCircle
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';

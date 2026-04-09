@@ -92,3 +92,4 @@ frontend/node_modules/.cache/default-development/1.pack
 *.env
 *.env.*
 frontend.zip
+frontend/node_modules/.cache/default-development/8.pack

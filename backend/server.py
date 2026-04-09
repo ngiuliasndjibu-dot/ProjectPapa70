@@ -169,7 +169,7 @@ class CartUpdate(BaseModel):
 
 class OrderCreate(BaseModel):
     shipping_address: dict
-    payment_method: str  # stripe, paypal, mobile_money, cod
+    payment_method: str  # paypal, mobile_money, cod
     mobile_money_provider: Optional[str] = None  # airtel, mpesa, orange, africell
     promo_code: Optional[str] = None
     notes: Optional[str] = None

@@ -1,93 +1,135 @@
-# TechGadgets E-Commerce Platform - PRD
+# Hyper-Gadgets - PRD (Product Requirements Document)
 
-## Original Problem Statement
-Site e-commerce complet pour la vente de gadgets technologiques en RDC avec:
-- Frontend React moderne avec design responsive
-- Backend FastAPI avec MongoDB
-- Intégrations: Stripe, PayPal, Mobile Money (M-Pesa, Airtel, Orange, Africell)
-- Chatbot IA avec GPT
-- Notifications SMS via Twilio
-- Multi-langue (FR/EN) et mode sombre/clair
+## Probleme Original
+Creer un site e-commerce moderne "Hyper-Gadgets" pour gadgets technologiques, cible RDC (Republique Democratique du Congo).
 
-## User Personas
-1. **Client Final** - Acheteurs de gadgets tech en RDC
-2. **Administrateur** - Gestion des produits, commandes, utilisateurs
+## Stack Technique
+- **Frontend**: React.js, Tailwind CSS, Shadcn UI, Framer Motion
+- **Backend**: FastAPI (Python), MongoDB (Motor async), JWT Auth, Bcrypt
+- **Paiements**: PayPal, Mobile Money RDC (M-Pesa, Airtel, Orange, Africell), Cash on Delivery
+- **SMS/OTP**: Twilio
+- **Chatbot**: OpenAI GPT (via Emergent LLM Key en dev / OpenAI SDK en prod)
+- **Deploiement**: IONOS VPS avec Nginx, Gunicorn, MongoDB
 
-## Core Requirements (Static)
-- [x] Page d'accueil avec hero, catégories, produits vedettes
-- [x] Catalogue/Boutique avec filtres et recherche
-- [x] Page détail produit avec galerie et avis
-- [x] Panier avec codes promo
-- [x] Checkout multi-étapes avec 4 modes de paiement
-- [x] Tableau de bord utilisateur
-- [x] Panel administrateur complet
-- [x] Chatbot IA intégré
-- [x] Mode sombre/clair
-- [x] Multi-langue FR/EN
+## Fonctionnalites Implementees (Complet)
 
-## What's Been Implemented (2026-04-02)
+### Phase 1 - MVP Core (Complete)
+- [x] Authentification JWT (login/register avec email ou telephone)
+- [x] Page d'accueil style Amazon/AliExpress avec bannières, flash sales, categories
+- [x] Catalogue produits avec filtres (categorie, prix, marque, note)
+- [x] Page detail produit avec avis et produits similaires
+- [x] Panier (ajout, modification, suppression)
+- [x] Checkout complet avec 3 methodes de paiement
+- [x] Dashboard utilisateur (commandes, adresses, wishlist)
+- [x] Dashboard admin (stats, CRUD produits, gestion commandes/utilisateurs)
+- [x] Chatbot IA
+- [x] Systeme de codes promo (WELCOME10, TECH20)
+- [x] SMS notifications via Twilio (statut commandes)
+- [x] Protection brute force login
+- [x] Sparse index MongoDB pour email/phone
 
-### Backend (FastAPI)
-- Authentication JWT avec email/téléphone
-- CRUD complet produits, catégories, commandes
-- Système de panier et codes promo
-- Intégration Stripe (checkout sessions)
-- Intégration PayPal
-- Mobile Money avec OTP (simulé via Twilio)
-- Paiement à la livraison
-- Chatbot IA (GPT via Emergent LLM)
-- Admin dashboard avec statistiques
-- Gestion des stocks automatique
-- Système d'avis et notes
+### Phase 2 - Paiements (Complete - 09/04/2026)
+- [x] **Stripe SUPPRIME** (par demande utilisateur)
+- [x] PayPal (sandbox configure)
+- [x] Mobile Money RDC avec flux OTP ameliore:
+  - Validation numero +243XXXXXXXXX
+  - Envoi OTP 6 chiffres par SMS Twilio
+  - Compteur 60s avant renvoi
+  - Endpoint /resend-otp
+  - Max 5 tentatives OTP
+  - Expiration 10 minutes
+  - Protection anti-spam (cooldown 60s)
+- [x] Paiement a la livraison (COD)
 
-### Frontend (React)
-- Design moderne avec palette tech (#0066FF, #1A1A2E)
-- Header avec navigation, recherche, panier
-- Page d'accueil animée
-- Catalogue avec filtres (catégorie, marque, prix)
-- Détail produit avec zoom, specs, avis
-- Panier slide-out
-- Checkout en 3 étapes
-- Dashboard utilisateur
-- Panel admin complet
-- Chatbot orb flottant
-- Mode sombre/clair
-- Basculement FR/EN
+### Phase 3 - Deploiement (Complete - 09/04/2026)
+- [x] Scripts de deploiement IONOS VPS
+- [x] Guide DEPLOY_IONOS.md complet
+- [x] Configuration Nginx (reverse proxy, SSL, gzip)
+- [x] Service systemd (gunicorn + uvicorn workers)
+- [x] Docker Compose (alternative)
+- [x] Script deploy.sh automatise
+- [x] Zip telechargeables a /tmp/hyper-gadgets.zip
 
-### Integrations
-- **Stripe**: Test key active (sk_test_emergent)
-- **PayPal**: Sandbox credentials configured
-- **Twilio**: SMS OTP pour Mobile Money
-- **GPT**: Via Emergent LLM key
+## Endpoints API
 
-## Test Credentials
+### Auth
+- POST /api/auth/register
+- POST /api/auth/login
+- POST /api/auth/logout
+- GET /api/auth/me
+- POST /api/auth/refresh
+
+### Products
+- GET /api/products (filtres: category, brand, price, sort, search)
+- GET /api/products/{id}
+- GET /api/products/search?q=
+- GET /api/products/brands/list
+
+### Cart
+- GET /api/cart
+- POST /api/cart/add
+- PUT /api/cart/update
+- DELETE /api/cart/remove/{product_id}
+- DELETE /api/cart/clear
+- POST /api/cart/promo?code=
+
+### Orders
+- POST /api/orders
+- GET /api/orders
+- GET /api/orders/{id}
+- GET /api/orders/track/{order_number}
+
+### Payments
+- POST /api/payments/mobile-money/initiate
+- POST /api/payments/mobile-money/resend-otp
+- POST /api/payments/mobile-money/verify
+
+### Admin
+- GET /api/admin/stats
+- GET /api/admin/orders
+- PUT /api/admin/orders/{id}/status
+- POST /api/admin/products
+- PUT /api/admin/products/{id}
+- DELETE /api/admin/products/{id}
+- GET /api/admin/users
+- POST /api/admin/categories
+- POST /api/admin/promo-codes
+- GET /api/admin/promo-codes
+
+### Other
+- POST /api/chat
+- GET /api/categories
+- POST /api/reviews
+
+## Taches Futures / Backlog
+
+### P1 - Haute Priorite
+- [ ] Migration chatbot vers OpenAI SDK standard (pour deploiement IONOS sans Emergent LLM Key)
+
+### P2 - Moyenne Priorite
+- [ ] Systeme de notifications en temps reel (WebSocket)
+- [ ] Historique de recherche utilisateur
+- [ ] Systeme de comparaison de produits
+- [ ] Export commandes en PDF
+
+### P3 - Basse Priorite
+- [ ] Mode multi-langue complet (FR/EN)
+- [ ] Integration Google Analytics
+- [ ] Programme de fidelite / points
+- [ ] Systeme d'avis avec photos
+
+## Schema Base de Donnees
+- **users**: email (sparse unique), phone (sparse unique), password_hash, role, name, addresses, wishlist
+- **products**: id, name, price, category, brand, images, specifications, stock, ratings
+- **orders**: id, order_number, user_id, items, total, shipping_address, payment_method, status
+- **carts**: user_id, items
+- **reviews**: product_id, user_id, rating, comment
+- **payment_transactions**: id, user_id, amount, provider, otp, status
+- **promo_codes**: code, discount_type, discount_value, uses
+- **categories**: id, name, slug
+- **chat_history**: session_id, messages
+- **login_attempts**: identifier, count, lockout_until
+
+## Credentials
 - Admin: admin@techgadgets.com / Admin@123
-- Promo codes: WELCOME10 (10%), TECH20 (20%)
-
-## Prioritized Backlog
-
-### P0 (Critical) - DONE
-- ✅ User authentication
-- ✅ Product catalog
-- ✅ Cart functionality
-- ✅ Checkout flow
-- ✅ Payment integrations
-
-### P1 (High Priority)
-- [ ] Email notifications (Resend/SendGrid)
-- [ ] Order tracking page
-- [ ] Invoice PDF generation
-- [ ] Product comparison
-
-### P2 (Nice to Have)
-- [ ] Wishlist sharing
-- [ ] Social media sharing
-- [ ] Customer reviews photos
-- [ ] Advanced analytics dashboard
-
-## Next Tasks
-1. Ajouter notifications email pour les commandes
-2. Créer page de suivi de commande publique
-3. Générer PDF pour les factures/bons de livraison
-4. Implémenter la comparaison de produits
-5. Tests end-to-end complets
+- Promo codes: WELCOME10 (10% min $50), TECH20 (20% min $200)
