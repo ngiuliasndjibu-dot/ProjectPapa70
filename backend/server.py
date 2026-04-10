@@ -102,7 +102,7 @@ async def get_optional_user(request: Request) -> Optional[dict]:
 
 # Cookie config based on environment (HTTPS on production)
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
-COOKIE_SAMESITE = "none" if COOKIE_SECURE else "lax"
+COOKIE_SAMESITE = "lax"
 
 def set_auth_cookies(response: Response, access_token: str, refresh_token: str = None):
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, max_age=3600, path="/")
@@ -1705,11 +1705,13 @@ async def shutdown_db_client():
 # Include router
 app.include_router(api_router)
 
-# CORS
+# CORS - Dynamic origins for cookie support
+CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
