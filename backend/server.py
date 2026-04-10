@@ -100,14 +100,27 @@ async def get_optional_user(request: Request) -> Optional[dict]:
     except:
         return None
 
-# Cookie config based on environment (HTTPS on production)
-COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
+# Cookie config - auto-detect HTTPS from request
+COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "auto")
 COOKIE_SAMESITE = "lax"
 
-def set_auth_cookies(response: Response, access_token: str, refresh_token: str = None):
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, max_age=3600, path="/")
+def get_cookie_secure(request: Request = None) -> bool:
+    if COOKIE_SECURE == "true":
+        return True
+    if COOKIE_SECURE == "false":
+        return False
+    # Auto-detect: check X-Forwarded-Proto or scheme
+    if request:
+        proto = request.headers.get("x-forwarded-proto", "")
+        if proto == "https":
+            return True
+    return False
+
+def set_auth_cookies(response: Response, access_token: str, refresh_token: str = None, request: Request = None):
+    secure = get_cookie_secure(request)
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=secure, samesite=COOKIE_SAMESITE, max_age=3600, path="/")
     if refresh_token:
-        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, max_age=604800, path="/")
+        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=secure, samesite=COOKIE_SAMESITE, max_age=604800, path="/")
 
 # FastAPI App
 app = FastAPI(title="Hyper-Gadgets E-Commerce API")
@@ -271,7 +284,7 @@ async def register(data: UserRegister, response: Response):
     access_token = create_access_token(user_id, identifier)
     refresh_token = create_refresh_token(user_id)
     
-    set_auth_cookies(response, access_token, refresh_token)
+    set_auth_cookies(response, access_token, refresh_token, request)
     
     return {
         "id": user_id,
@@ -323,7 +336,7 @@ async def login(data: UserLogin, response: Response, request: Request):
     access_token = create_access_token(user_id, user.get("email") or user.get("phone", ""))
     refresh_token = create_refresh_token(user_id)
     
-    set_auth_cookies(response, access_token, refresh_token)
+    set_auth_cookies(response, access_token, refresh_token, request)
     
     return {
         "id": user_id,
@@ -361,7 +374,7 @@ async def refresh_token(request: Request, response: Response):
             raise HTTPException(status_code=401, detail="User not found")
         
         access_token = create_access_token(str(user["_id"]), user.get("email") or user.get("phone", ""))
-        set_auth_cookies(response, access_token)
+        set_auth_cookies(response, access_token, request=request)
         return {"message": "Token refreshed"}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Refresh token expired")
@@ -771,7 +784,8 @@ async def add_to_cart(item: CartItem, request: Request, response: Response):
     
     if not user_id:
         user_id = str(uuid.uuid4())
-        response.set_cookie(key="cart_session", value=user_id, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, max_age=604800, path="/")
+        secure = get_cookie_secure(request)
+        response.set_cookie(key="cart_session", value=user_id, httponly=True, secure=secure, samesite=COOKIE_SAMESITE, max_age=604800, path="/")
     
     # Check product exists and has stock
     product = await db.products.find_one({"id": item.product_id})
