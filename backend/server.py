@@ -294,7 +294,8 @@ async def register(data: UserRegister, response: Response):
         "role": user_doc["role"],
         "addresses": [],
         "wishlist": [],
-        "created_at": user_doc["created_at"]
+        "created_at": user_doc["created_at"],
+        "token": access_token
     }
 
 @api_router.post("/auth/login")
@@ -346,7 +347,8 @@ async def login(data: UserLogin, response: Response, request: Request):
         "role": user["role"],
         "addresses": user.get("addresses", []),
         "wishlist": [str(w) for w in user.get("wishlist", [])],
-        "created_at": user["created_at"]
+        "created_at": user["created_at"],
+        "token": access_token
     }
 
 @api_router.post("/auth/logout")
@@ -363,6 +365,10 @@ async def get_me(request: Request):
 @api_router.post("/auth/refresh")
 async def refresh_token(request: Request, response: Response):
     token = request.cookies.get("refresh_token")
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
     if not token:
         raise HTTPException(status_code=401, detail="No refresh token")
     try:
@@ -1720,11 +1726,19 @@ async def shutdown_db_client():
 app.include_router(api_router)
 
 # CORS - Dynamic origins for cookie support
-CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
+CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "").split(",")
+CORS_ORIGINS = [o.strip() for o in CORS_ORIGINS if o.strip() and o.strip() != "*"]
+
+# If no specific origins, allow all via reflect
+if not CORS_ORIGINS:
+    CORS_ORIGINS = ["*"]
+    CORS_ALLOW_CREDENTIALS = False
+else:
+    CORS_ALLOW_CREDENTIALS = True
 
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
+    allow_credentials=CORS_ALLOW_CREDENTIALS,
     allow_origins=CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,11 +1,7 @@
 import React from "react";
 import "@/App.css";
-import axios from "axios";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
-
-// Set axios defaults globally - critical for cookie auth
-axios.defaults.withCredentials = true;
 
 // Providers
 import { AuthProvider, useAuth } from "./context/AuthContext";
