@@ -48,12 +48,12 @@ export const Header = () => {
       className={`sticky top-0 z-50 glass ${isDark ? 'glass-dark' : 'glass-light'} transition-all duration-300`}
       data-testid="main-header"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 md:h-20">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-14 sm:h-16 md:h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2" data-testid="logo-link">
-            <div className="w-10 h-10 rounded-xl bg-[#0066FF] flex items-center justify-center">
-              <Package className="w-6 h-6 text-white" />
+          <Link to="/" className="flex items-center gap-1.5 sm:gap-2" data-testid="logo-link">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#0066FF] flex items-center justify-center flex-shrink-0">
+              <Package className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <span className="font-bold text-xl tracking-tight hidden sm:block">
               Hyper-<span className="text-[#0066FF]">Gadgets</span>
@@ -96,40 +96,40 @@ export const Header = () => {
           </form>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
             {/* Theme Toggle */}
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
-              className={`rounded-full ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
+              className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
               data-testid="theme-toggle"
             >
-              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {isDark ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
             </Button>
 
-            {/* Language Toggle */}
+            {/* Language Toggle - hidden on very small screens */}
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleLanguage}
-              className={`rounded-full ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
+              className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 hidden xs:flex ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
               data-testid="language-toggle"
             >
-              <Globe className="w-5 h-5" />
+              <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="sr-only">{language.toUpperCase()}</span>
             </Button>
 
-            {/* Wishlist */}
+            {/* Wishlist - hidden on mobile */}
             {isAuthenticated && (
-              <Link to="/wishlist">
+              <Link to="/wishlist" className="hidden sm:block">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={`rounded-full ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
+                  className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
                   data-testid="wishlist-btn"
                 >
-                  <Heart className="w-5 h-5" />
+                  <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
                 </Button>
               </Link>
             )}
@@ -139,15 +139,15 @@ export const Header = () => {
               variant="ghost"
               size="icon"
               onClick={openCart}
-              className={`rounded-full relative ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
+              className={`rounded-full relative w-8 h-8 sm:w-10 sm:h-10 ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
               data-testid="cart-btn"
             >
-              <ShoppingCart className="w-5 h-5" />
+              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
               {itemCount > 0 && (
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 w-5 h-5 bg-[#0066FF] text-white text-xs rounded-full flex items-center justify-center font-medium"
+                  className="absolute -top-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 bg-[#0066FF] text-white text-[10px] sm:text-xs rounded-full flex items-center justify-center font-medium"
                 >
                   {itemCount}
                 </motion.span>

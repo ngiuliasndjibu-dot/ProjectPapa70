@@ -214,21 +214,21 @@ export const HomePage = () => {
     <div className={`min-h-screen ${isDark ? 'bg-[#1A1A2E]' : 'bg-[#F0F2F5]'}`} data-testid="home-page">
       
       {/* Top Promo Bar */}
-      <div className="bg-gradient-to-r from-[#FF3B30] to-[#FF6B5B] text-white py-2 px-4 text-center text-sm font-medium">
-        <span className="flex items-center justify-center gap-2">
-          <Zap className="w-4 h-4" />
-          VENTE FLASH! Utilisez le code <span className="font-bold bg-white/20 px-2 py-0.5 rounded">WELCOME10</span> pour -10% sur votre 1ère commande
-          <Zap className="w-4 h-4" />
+      <div className="bg-gradient-to-r from-[#FF3B30] to-[#FF6B5B] text-white py-2 px-4 text-center text-xs sm:text-sm font-medium">
+        <span className="flex items-center justify-center gap-1 sm:gap-2">
+          <Zap className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+          <span className="truncate">VENTE FLASH! Code <span className="font-bold bg-white/20 px-1.5 sm:px-2 py-0.5 rounded">WELCOME10</span> pour -10%</span>
+          <Zap className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 hidden sm:block" />
         </span>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
         
         {/* Main Hero Section - Amazon Style Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           
           {/* Main Banner Carousel */}
-          <div className="lg:col-span-3 relative rounded-2xl overflow-hidden h-[300px] lg:h-[400px]">
+          <div className="lg:col-span-3 relative rounded-xl sm:rounded-2xl overflow-hidden h-[200px] sm:h-[300px] lg:h-[400px]">
             {banners.map((banner, idx) => (
               <motion.div
                 key={banner.id || idx}
@@ -238,17 +238,17 @@ export const HomePage = () => {
                 className={`absolute inset-0 bg-gradient-to-r ${banner.gradient || 'from-[#0066FF] to-[#3385FF]'} flex items-center`}
                 style={{ zIndex: currentBanner === idx ? 1 : 0 }}
               >
-                <div className="flex-1 p-8 lg:p-12">
-                  <Badge className="bg-white/20 text-white mb-4">{banner.title}</Badge>
-                  <h1 className="text-3xl lg:text-5xl font-bold text-white mb-4">{banner.subtitle}</h1>
+                <div className="flex-1 p-5 sm:p-8 lg:p-12">
+                  <Badge className="bg-white/20 text-white mb-2 sm:mb-4 text-xs">{banner.title}</Badge>
+                  <h1 className="text-xl sm:text-3xl lg:text-5xl font-bold text-white mb-2 sm:mb-4 leading-tight">{banner.subtitle}</h1>
                   <Button 
                     onClick={() => navigate(banner.link || '/shop')}
-                    className="bg-white text-gray-900 hover:bg-gray-100 rounded-full px-8"
+                    className="bg-white text-gray-900 hover:bg-gray-100 rounded-full px-4 sm:px-8 text-sm sm:text-base h-9 sm:h-10"
                   >
-                    {banner.button_text || 'Acheter maintenant'} <ArrowRight className="w-4 h-4 ml-2" />
+                    {banner.button_text || 'Acheter maintenant'} <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
                   </Button>
                 </div>
-                <div className="hidden lg:block w-1/3 h-full relative">
+                <div className="hidden sm:block w-1/3 h-full relative">
                   {banner.image && <img src={banner.image} alt="" className="absolute right-0 bottom-0 h-full object-contain" />}
                 </div>
               </motion.div>
@@ -298,20 +298,20 @@ export const HomePage = () => {
         </div>
 
         {/* Categories Quick Links */}
-        <div className={`rounded-2xl p-4 mb-6 ${isDark ? 'bg-[#1e1e36]' : 'bg-white shadow-sm'}`}>
-          <div className="flex items-center gap-6 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+        <div className={`rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 ${isDark ? 'bg-[#1e1e36]' : 'bg-white shadow-sm'}`}>
+          <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
             {categories.map((cat) => (
               <Link 
                 key={cat.id} 
                 to={`/shop?category=${cat.slug}`}
-                className="flex flex-col items-center gap-2 flex-shrink-0 group"
+                className="flex flex-col items-center gap-1.5 sm:gap-2 flex-shrink-0 group"
               >
-                <div className={`w-16 h-16 rounded-full overflow-hidden border-2 border-transparent group-hover:border-[#0066FF] transition-all ${
+                <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-transparent group-hover:border-[#0066FF] transition-all ${
                   isDark ? 'bg-[#252542]' : 'bg-gray-100'
                 }`}>
                   <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
                 </div>
-                <span className={`text-xs font-medium text-center ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                <span className={`text-[10px] sm:text-xs font-medium text-center max-w-[60px] sm:max-w-none leading-tight ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   {language === 'en' && cat.name_en ? cat.name_en : cat.name}
                 </span>
               </Link>
@@ -320,28 +320,28 @@ export const HomePage = () => {
         </div>
 
         {/* Flash Deals Section */}
-        <div className={`rounded-2xl p-4 mb-6 ${isDark ? 'bg-[#1e1e36]' : 'bg-white shadow-sm'}`}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-[#FF3B30] p-2 rounded-lg">
-                <Zap className="w-5 h-5 text-white" />
+        <div className={`rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 ${isDark ? 'bg-[#1e1e36]' : 'bg-white shadow-sm'}`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="bg-[#FF3B30] p-1.5 sm:p-2 rounded-lg">
+                <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <h2 className={`text-base sm:text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   Ventes Flash
                 </h2>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p className={`text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} hidden sm:block`}>
                   Offres limitées dans le temps
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Se termine dans:</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className={`text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Fin dans:</span>
               <CountdownTimer endTime={flashSaleEnd.toISOString()} />
             </div>
           </div>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
             {dealsProducts.slice(0, 6).map((product) => (
               <MiniProductCard key={product.id} product={product} isDark={isDark} />
             ))}
@@ -349,55 +349,55 @@ export const HomePage = () => {
         </div>
 
         {/* Deal of the Day + Features */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
           
           {/* Deal of the Day */}
           {dealOfDay && (
-            <div className={`lg:col-span-2 rounded-2xl overflow-hidden ${isDark ? 'bg-[#1e1e36]' : 'bg-white shadow-sm'}`}>
-              <div className="bg-gradient-to-r from-[#FF3B30] to-[#FF6B5B] p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-white">
-                  <Gift className="w-5 h-5" />
-                  <span className="font-bold">OFFRE DU JOUR</span>
+            <div className={`lg:col-span-2 rounded-xl sm:rounded-2xl overflow-hidden ${isDark ? 'bg-[#1e1e36]' : 'bg-white shadow-sm'}`}>
+              <div className="bg-gradient-to-r from-[#FF3B30] to-[#FF6B5B] p-2 sm:p-3 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-white">
+                  <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="font-bold text-xs sm:text-base">OFFRE DU JOUR</span>
                 </div>
                 <CountdownTimer endTime={flashSaleEnd.toISOString()} />
               </div>
-              <div className="p-6 flex flex-col md:flex-row gap-6">
-                <div className="md:w-1/2">
+              <div className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
+                <div className="sm:w-1/2">
                   <img 
                     src={dealOfDay.images?.[0]} 
                     alt={dealOfDay.name}
-                    className="w-full h-64 object-contain"
+                    className="w-full h-48 sm:h-64 object-contain"
                   />
                 </div>
-                <div className="md:w-1/2 flex flex-col justify-center">
-                  <Badge className="w-fit bg-[#FF3B30] text-white mb-2">
+                <div className="sm:w-1/2 flex flex-col justify-center">
+                  <Badge className="w-fit bg-[#FF3B30] text-white mb-2 text-xs">
                     -{Math.round((1 - dealOfDay.price / dealOfDay.compare_price) * 100)}% OFF
                   </Badge>
-                  <h3 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <h3 className={`text-lg sm:text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                     {dealOfDay.name}
                   </h3>
-                  <div className="flex items-center gap-1 mb-3">
+                  <div className="flex items-center gap-1 mb-2 sm:mb-3">
                     {[1,2,3,4,5].map(s => (
-                      <Star key={s} className={`w-4 h-4 ${s <= (dealOfDay.avg_rating || 4) ? 'fill-[#FFB300] text-[#FFB300]' : 'text-gray-300'}`} />
+                      <Star key={s} className={`w-3 h-3 sm:w-4 sm:h-4 ${s <= (dealOfDay.avg_rating || 4) ? 'fill-[#FFB300] text-[#FFB300]' : 'text-gray-300'}`} />
                     ))}
-                    <span className={`text-sm ml-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <span className={`text-xs sm:text-sm ml-1 sm:ml-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                       ({dealOfDay.review_count || 0} avis)
                     </span>
                   </div>
-                  <div className="flex items-baseline gap-3 mb-4">
-                    <span className="text-4xl font-bold text-[#FF3B30]">${dealOfDay.price}</span>
-                    <span className={`text-xl line-through ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <div className="flex items-baseline gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    <span className="text-2xl sm:text-4xl font-bold text-[#FF3B30]">${dealOfDay.price}</span>
+                    <span className={`text-base sm:text-xl line-through ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                       ${dealOfDay.compare_price}
                     </span>
                   </div>
-                  <p className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <p className={`text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2 sm:line-clamp-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     {dealOfDay.description?.substring(0, 150)}...
                   </p>
                   <Button 
                     onClick={() => navigate(`/product/${dealOfDay.id}`)}
-                    className="bg-[#FF3B30] hover:bg-[#E63429] text-white rounded-full"
+                    className="bg-[#FF3B30] hover:bg-[#E63429] text-white rounded-full text-sm h-9 sm:h-10"
                   >
-                    Voir l'offre <ArrowRight className="w-4 h-4 ml-2" />
+                    Voir l'offre <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />
                   </Button>
                 </div>
               </div>
@@ -405,23 +405,23 @@ export const HomePage = () => {
           )}
 
           {/* Features */}
-          <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 sm:gap-4">
             {[
               { icon: Truck, title: 'Livraison Rapide', desc: 'Partout en RDC', color: '#0066FF' },
-              { icon: Shield, title: 'Paiement Sécurisé', desc: 'SSL & Mobile Money', color: '#00C853' },
+              { icon: Shield, title: 'Paiement Securise', desc: 'SSL & Mobile Money', color: '#00C853' },
               { icon: Headphones, title: 'Support 24/7', desc: 'Assistance continue', color: '#9C27B0' },
               { icon: Percent, title: 'Meilleurs Prix', desc: 'Garantie prix bas', color: '#FF6B00' }
             ].map((feature, idx) => (
               <div 
                 key={idx}
-                className={`flex items-center gap-4 p-4 rounded-xl ${isDark ? 'bg-[#1e1e36]' : 'bg-white shadow-sm'}`}
+                className={`flex items-center gap-2 sm:gap-4 p-3 sm:p-4 rounded-xl ${isDark ? 'bg-[#1e1e36]' : 'bg-white shadow-sm'}`}
               >
-                <div className="p-3 rounded-xl" style={{ backgroundColor: `${feature.color}15` }}>
-                  <feature.icon className="w-6 h-6" style={{ color: feature.color }} />
+                <div className="p-2 sm:p-3 rounded-xl flex-shrink-0" style={{ backgroundColor: `${feature.color}15` }}>
+                  <feature.icon className="w-4 h-4 sm:w-6 sm:h-6" style={{ color: feature.color }} />
                 </div>
-                <div>
-                  <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{feature.title}</h4>
-                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{feature.desc}</p>
+                <div className="min-w-0">
+                  <h4 className={`font-semibold text-xs sm:text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>{feature.title}</h4>
+                  <p className={`text-[10px] sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{feature.desc}</p>
                 </div>
               </div>
             ))}
@@ -475,10 +475,10 @@ export const HomePage = () => {
         })}
 
         {/* Bottom Promo Banners */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div 
             onClick={() => navigate('/shop?category=gaming')}
-            className="relative rounded-2xl overflow-hidden h-48 cursor-pointer group"
+            className="relative rounded-xl sm:rounded-2xl overflow-hidden h-36 sm:h-48 cursor-pointer group"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-purple-900/90 to-purple-600/70" />
             <img 
@@ -486,19 +486,19 @@ export const HomePage = () => {
               alt="Gaming"
               className="absolute inset-0 w-full h-full object-cover -z-10 group-hover:scale-105 transition-transform duration-500"
             />
-            <div className="relative p-6 h-full flex flex-col justify-center">
-              <Badge className="w-fit bg-white/20 text-white mb-2">Gaming</Badge>
-              <h3 className="text-2xl font-bold text-white">Équipement Gamer</h3>
-              <p className="text-white/80 mt-1">Consoles, manettes & accessoires</p>
-              <Button variant="link" className="text-white p-0 mt-2 w-fit">
-                Explorer <ArrowRight className="w-4 h-4 ml-1" />
+            <div className="relative p-4 sm:p-6 h-full flex flex-col justify-center">
+              <Badge className="w-fit bg-white/20 text-white mb-1 sm:mb-2 text-xs">Gaming</Badge>
+              <h3 className="text-lg sm:text-2xl font-bold text-white">Equipement Gamer</h3>
+              <p className="text-white/80 mt-0.5 sm:mt-1 text-xs sm:text-base">Consoles, manettes & accessoires</p>
+              <Button variant="link" className="text-white p-0 mt-1 sm:mt-2 w-fit text-xs sm:text-sm h-auto">
+                Explorer <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
               </Button>
             </div>
           </div>
           
           <div 
             onClick={() => navigate('/shop?category=laptops')}
-            className="relative rounded-2xl overflow-hidden h-48 cursor-pointer group"
+            className="relative rounded-xl sm:rounded-2xl overflow-hidden h-36 sm:h-48 cursor-pointer group"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-blue-900/90 to-blue-600/70" />
             <img 
@@ -506,34 +506,34 @@ export const HomePage = () => {
               alt="Laptops"
               className="absolute inset-0 w-full h-full object-cover -z-10 group-hover:scale-105 transition-transform duration-500"
             />
-            <div className="relative p-6 h-full flex flex-col justify-center">
-              <Badge className="w-fit bg-white/20 text-white mb-2">Laptops</Badge>
-              <h3 className="text-2xl font-bold text-white">Ordinateurs Portables</h3>
-              <p className="text-white/80 mt-1">MacBook, Dell, HP & plus</p>
-              <Button variant="link" className="text-white p-0 mt-2 w-fit">
-                Explorer <ArrowRight className="w-4 h-4 ml-1" />
+            <div className="relative p-4 sm:p-6 h-full flex flex-col justify-center">
+              <Badge className="w-fit bg-white/20 text-white mb-1 sm:mb-2 text-xs">Laptops</Badge>
+              <h3 className="text-lg sm:text-2xl font-bold text-white">Ordinateurs Portables</h3>
+              <p className="text-white/80 mt-0.5 sm:mt-1 text-xs sm:text-base">MacBook, Dell, HP & plus</p>
+              <Button variant="link" className="text-white p-0 mt-1 sm:mt-2 w-fit text-xs sm:text-sm h-auto">
+                Explorer <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
               </Button>
             </div>
           </div>
         </div>
 
         {/* Newsletter CTA */}
-        <div className={`rounded-2xl p-8 text-center ${isDark ? 'bg-gradient-to-r from-[#252542] to-[#1e1e36]' : 'bg-gradient-to-r from-gray-100 to-gray-50'}`}>
-          <h3 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Restez informé des meilleures offres !
+        <div className={`rounded-xl sm:rounded-2xl p-5 sm:p-8 text-center ${isDark ? 'bg-gradient-to-r from-[#252542] to-[#1e1e36]' : 'bg-gradient-to-r from-gray-100 to-gray-50'}`}>
+          <h3 className={`text-lg sm:text-2xl font-bold mb-1 sm:mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Restez informe des meilleures offres !
           </h3>
-          <p className={`mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`mb-3 sm:mb-4 text-xs sm:text-base ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Inscrivez-vous pour recevoir nos promotions exclusives
           </p>
           <div className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto">
             <input 
               type="email" 
               placeholder="Votre email"
-              className={`flex-1 px-4 py-3 rounded-full border ${
+              className={`flex-1 px-4 py-2.5 sm:py-3 rounded-full border text-sm ${
                 isDark ? 'bg-[#1A1A2E] border-white/10 text-white' : 'bg-white border-gray-200'
               }`}
             />
-            <Button className="bg-[#0066FF] hover:bg-[#3385FF] rounded-full px-8">
+            <Button className="bg-[#0066FF] hover:bg-[#3385FF] rounded-full px-6 sm:px-8 h-10 sm:h-auto">
               S'inscrire
             </Button>
           </div>

@@ -68,7 +68,7 @@ export const ProductCard = ({ product, index = 0 }) => {
       onClick={handleCardClick}
       className="cursor-pointer"
     >
-      <div className={`group relative rounded-2xl overflow-hidden card-hover ${
+      <div className={`group relative rounded-xl sm:rounded-2xl overflow-hidden card-hover ${
         isDark 
           ? 'bg-[#252542] border border-white/5' 
           : 'bg-white border border-gray-100 shadow-sm hover:shadow-md'
@@ -82,8 +82,8 @@ export const ProductCard = ({ product, index = 0 }) => {
             loading="lazy"
           />
           
-          {/* Overlay Actions */}
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+          {/* Overlay Actions - hidden on mobile, shown on hover desktop */}
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden sm:flex items-center justify-center gap-3">
             <Button
               size="icon"
               variant="secondary"
@@ -113,53 +113,63 @@ export const ProductCard = ({ product, index = 0 }) => {
             </Button>
           </div>
 
+          {/* Mobile: Quick add to cart button */}
+          <button
+            onClick={handleAddToCart}
+            disabled={loading || product.stock === 0}
+            className="sm:hidden absolute bottom-2 right-2 w-8 h-8 bg-[#0066FF] text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+            data-testid={`add-to-cart-mobile-${product.id}`}
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+          </button>
+
           {/* Badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-2">
+          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex flex-col gap-1 sm:gap-2">
             {discount > 0 && (
-              <Badge className="bg-[#FF3B30] text-white">-{discount}%</Badge>
+              <Badge className="bg-[#FF3B30] text-white text-[10px] sm:text-xs px-1.5 sm:px-2">-{discount}%</Badge>
             )}
             {product.is_new && (
-              <Badge className="bg-[#00C853] text-white">Nouveau</Badge>
+              <Badge className="bg-[#00C853] text-white text-[10px] sm:text-xs px-1.5 sm:px-2">Nouveau</Badge>
             )}
             {product.stock === 0 && (
-              <Badge variant="secondary" className="bg-gray-800 text-white">Rupture</Badge>
+              <Badge variant="secondary" className="bg-gray-800 text-white text-[10px] sm:text-xs px-1.5 sm:px-2">Rupture</Badge>
             )}
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-4">
-          <p className={`text-xs font-medium uppercase tracking-wider mb-1 ${isDark ? 'text-[#0066FF]' : 'text-[#0066FF]'}`}>
+        <div className="p-2.5 sm:p-4">
+          <p className={`text-[10px] sm:text-xs font-medium uppercase tracking-wider mb-0.5 sm:mb-1 ${isDark ? 'text-[#0066FF]' : 'text-[#0066FF]'}`}>
             {product.brand}
           </p>
-          <h3 className={`font-semibold mb-2 line-clamp-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <h3 className={`font-semibold mb-1.5 sm:mb-2 line-clamp-2 text-xs sm:text-base leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
             {displayName}
           </h3>
           
           {/* Rating */}
-          <div className="flex items-center gap-1 mb-3">
+          <div className="flex items-center gap-0.5 sm:gap-1 mb-1.5 sm:mb-3">
             {[1, 2, 3, 4, 5].map((star) => (
               <Star
                 key={star}
-                className={`w-4 h-4 ${
+                className={`w-3 h-3 sm:w-4 sm:h-4 ${
                   star <= (product.avg_rating || 0)
                     ? 'fill-[#FFB300] text-[#FFB300]'
                     : isDark ? 'text-gray-600' : 'text-gray-300'
                 }`}
               />
             ))}
-            <span className={`text-sm ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            <span className={`text-[10px] sm:text-sm ml-0.5 sm:ml-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               ({product.review_count || 0})
             </span>
           </div>
 
           {/* Price */}
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-[#0066FF]">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="text-base sm:text-xl font-bold text-[#0066FF]">
               ${product.price?.toFixed(2)}
             </span>
             {product.compare_price && (
-              <span className={`text-sm line-through ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              <span className={`text-[10px] sm:text-sm line-through ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                 ${product.compare_price?.toFixed(2)}
               </span>
             )}
