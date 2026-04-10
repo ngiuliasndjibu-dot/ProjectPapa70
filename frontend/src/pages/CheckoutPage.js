@@ -345,7 +345,7 @@ export const CheckoutPage = () => {
                 <Card className={isDark ? 'bg-[#252542] border-white/10' : ''}>
                   <CardHeader>
                     <CardTitle className={`flex items-center gap-2 ${isDark ? 'text-white' : ''}`}>
-                      <CreditCard className="w-5 h-5 text-[#0066FF]" />
+                      <Smartphone className="w-5 h-5 text-[#0066FF]" />
                       {t('paymentMethod')}
                     </CardTitle>
                   </CardHeader>
