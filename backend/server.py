@@ -771,7 +771,7 @@ async def add_to_cart(item: CartItem, request: Request, response: Response):
     
     if not user_id:
         user_id = str(uuid.uuid4())
-        response.set_cookie(key="cart_session", value=user_id, httponly=True, max_age=604800, path="/")
+        response.set_cookie(key="cart_session", value=user_id, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, max_age=604800, path="/")
     
     # Check product exists and has stock
     product = await db.products.find_one({"id": item.product_id})
