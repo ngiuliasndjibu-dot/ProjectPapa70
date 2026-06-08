@@ -80,7 +80,7 @@ export default function LoginPage() {
                 <div className="absolute inset-0 bg-gradient-to-r from-stone-900/80 to-stone-900/40" />
                 <div className="relative z-10 flex flex-col justify-end p-12 text-white">
                     <h1 className="text-5xl font-bold mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
-                        Lumière POS
+                        Egoli Pos
                     </h1>
                     <p className="text-lg text-stone-300 max-w-md">
                         Système de gestion de restaurant moderne et élégant. Optimisé pour les écrans tactiles.
@@ -97,7 +97,7 @@ export default function LoginPage() {
                             <UtensilsCrossed className="w-8 h-8 text-white" />
                         </div>
                         <h1 className="text-3xl font-bold" style={{ fontFamily: 'Playfair Display, serif' }}>
-                            Lumière POS
+                            Egoli Pos
                         </h1>
                     </div>
 
