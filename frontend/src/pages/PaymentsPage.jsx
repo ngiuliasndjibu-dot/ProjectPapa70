@@ -623,7 +623,7 @@ export default function PaymentsPage() {
 
                         <div className="space-y-2">
                             <Label htmlFor="amount">
-                                Montant reçu ({paymentData.currency?.symbol || 'FCFA'})
+                                Montant reçu ({paymentData.currency?.symbol || 'FC'})
                             </Label>
                             <Input
                                 id="amount"

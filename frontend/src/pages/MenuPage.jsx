@@ -306,7 +306,7 @@ export default function MenuPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="price">Prix (FCFA)</Label>
+                                <Label htmlFor="price">Prix (FC)</Label>
                                 <Input
                                     id="price"
                                     type="number"

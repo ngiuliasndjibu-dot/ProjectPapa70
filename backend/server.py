@@ -1537,7 +1537,7 @@ async def print_order_receipt(order_id: str, printer_id: Optional[str] = None, c
     
     # Get currency for formatting
     selling_currency = await db.currencies.find_one({"is_selling": True}, {"_id": 0})
-    currency_symbol = selling_currency["symbol"] if selling_currency else "FCFA"
+    currency_symbol = selling_currency["symbol"] if selling_currency else "FC"
     
     # Create receipt
     receipt_data = printer_service.create_receipt(
@@ -1612,7 +1612,7 @@ async def print_daily_close_report(printer_id: Optional[str] = None, current_use
     
     # Get currency
     selling_currency = await db.currencies.find_one({"is_selling": True}, {"_id": 0})
-    currency_symbol = selling_currency["symbol"] if selling_currency else "FCFA"
+    currency_symbol = selling_currency["symbol"] if selling_currency else "FC"
     
     # Create report
     report_data = printer_service.create_daily_close_report(

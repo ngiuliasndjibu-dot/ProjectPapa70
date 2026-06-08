@@ -90,7 +90,7 @@ export const CurrencyProvider = ({ children }) => {
     const formatPrice = useCallback((amount, currency = null) => {
         const curr = currency || sellingCurrency || referenceCurrency;
         if (!curr) {
-            return new Intl.NumberFormat('fr-FR').format(amount) + ' FCFA';
+            return new Intl.NumberFormat('fr-FR').format(amount) + ' FC';
         }
         
         const formatted = new Intl.NumberFormat('fr-FR', {

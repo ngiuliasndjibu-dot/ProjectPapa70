@@ -1020,7 +1020,7 @@ export default function SettingsPage() {
                                     id="symbol"
                                     value={currencyFormData.symbol}
                                     onChange={(e) => setCurrencyFormData(prev => ({ ...prev, symbol: e.target.value }))}
-                                    placeholder="FCFA"
+                                    placeholder="FC"
                                 />
                             </div>
                         </div>

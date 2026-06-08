@@ -437,7 +437,7 @@ class PrinterService:
         items: List[Dict[str, Any]],
         subtotal: float,
         total: float,
-        currency_symbol: str = "FCFA",
+        currency_symbol: str = "FC",
         payment_method: str = "",
         restaurant_name: str = "LUMIÈRE RESTAURANT",
         restaurant_address: str = "",
@@ -511,7 +511,7 @@ class PrinterService:
         order_count: int,
         payment_breakdown: Dict[str, float],
         department_breakdown: Dict[str, float],
-        currency_symbol: str = "FCFA",
+        currency_symbol: str = "FC",
         restaurant_name: str = "LUMIÈRE RESTAURANT",
         paper_width: int = 48
     ) -> bytes:

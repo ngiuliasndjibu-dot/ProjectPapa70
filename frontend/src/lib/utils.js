@@ -5,7 +5,7 @@ export function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
-// Format price with currency (default FCFA for backward compatibility)
+// Format price with currency (default FC for backward compatibility)
 export function formatPrice(price, currency = null) {
     if (currency) {
         const formatted = new Intl.NumberFormat('fr-FR', {
@@ -14,11 +14,11 @@ export function formatPrice(price, currency = null) {
         }).format(price);
         return `${formatted} ${currency.symbol}`;
     }
-    return new Intl.NumberFormat('fr-FR').format(price) + ' FCFA';
+    return new Intl.NumberFormat('fr-FR').format(price) + ' FC';
 }
 
 // Format price with specific symbol
-export function formatPriceWithSymbol(price, symbol = 'FCFA', decimals = 0) {
+export function formatPriceWithSymbol(price, symbol = 'FC', decimals = 0) {
     const formatted = new Intl.NumberFormat('fr-FR', {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
