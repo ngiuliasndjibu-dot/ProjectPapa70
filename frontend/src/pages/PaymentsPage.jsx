@@ -800,15 +800,18 @@ export default function PaymentsPage() {
                                     <SelectValue placeholder="Choisir une table" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {mergeSelection.map(id => {
-                                        const o = orders.find(ord => ord.id === id);
-                                        if (!o) return null;
-                                        return (
-                                            <SelectItem key={o.table_id} value={o.table_id}>
-                                                Table {o.table_number}
-                                            </SelectItem>
-                                        );
-                                    })}
+                                    {Array.from(
+                                        new Map(
+                                            mergeSelection
+                                                .map(id => orders.find(ord => ord.id === id))
+                                                .filter(Boolean)
+                                                .map(o => [o.table_id, o.table_number])
+                                        ).entries()
+                                    ).map(([tableId, tableNumber]) => (
+                                        <SelectItem key={tableId} value={tableId}>
+                                            Table {tableNumber}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>

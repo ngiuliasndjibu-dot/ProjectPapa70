@@ -42,6 +42,18 @@ Application complète de gestion de restaurant POS (Point of Sale) avec séparat
 
 ## What's Been Implemented
 
+### Session 2025-12 (Fork) — Intégration lot fonctionnalités + Fusion/Division
+✅ **Intégration des 5 nouvelles pages** (routage + navigation)
+   - Routes ajoutées dans App.js: /reservations, /loyalty, /ingredients, /reports, /restaurant-settings
+   - Liens de navigation ajoutés dans Sidebar.jsx (Réservations, Fidélité, Ingrédients, Rapports, Établissement)
+✅ **Fusion / Division d'addition (Split/Merge bills)**
+   - Backend: corrigé signatures FastAPI (MergeOrdersRequest / SplitOrderRequest en body Pydantic) — POST /api/orders/merge, POST /api/orders/{id}/split
+   - Split par articles (by_items) et à montant égal (equal)
+   - UI complète dans PaymentsPage.jsx: cases à cocher pour fusion, bouton Diviser par commande, modales Split/Merge
+   - Déduplication des tables dans la modale de fusion
+   - Testé: 12/12 tests backend pytest + vérification frontend e2e
+   - Fichier de tests: /app/backend/tests/test_new_features.py
+
 ### Session 2024-12-17
 ✅ **Système multi-devises complet**
    - Prix affichés dans la devise de vente (FC - Franc Congolais)
@@ -99,14 +111,17 @@ Application complète de gestion de restaurant POS (Point of Sale) avec séparat
 
 ### P1 (High) - IN PROGRESS
 - [x] Real printer integration (ESC/POS)
+- [x] Order fusion/split (backend + frontend, tested)
 - [ ] Complete offline sync logic (structure ready)
-- [ ] Order fusion/split
+- [ ] Auto-invoice on table close (close-table endpoint exists; wire to payment flow + auto-print)
+- [ ] PDF generation for ReportsPage (backend PDF export)
 
 ### P2 (Medium)
-- [ ] Inventory tracking with recipes
-- [ ] Customer reservations
-- [ ] Loyalty program
+- [ ] Inventory tracking with recipes (endpoints exist; wire deduction on sale — partly via deduct_ingredients_for_order)
+- [x] Customer reservations (UI + API integrated)
+- [x] Loyalty program (UI + API integrated)
 - [ ] PDF daily reports
+- [ ] Refactor server.py (~2915 lines) into routers/models modules
 
 ## API Endpoints
 ### Authentication

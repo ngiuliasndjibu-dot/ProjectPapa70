@@ -231,7 +231,7 @@ export default function ReportsPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <div style={{ width: '100%', height: 200 }}>
-                                            <ResponsiveContainer>
+                                            <ResponsiveContainer width="100%" height="100%">
                                                 <AreaChart data={dailyReport.hourly_sales}>
                                                     <CartesianGrid strokeDasharray="3 3" />
                                                     <XAxis dataKey="hour" tickFormatter={(h) => `${h}h`} />
@@ -333,7 +333,7 @@ export default function ReportsPage() {
                                 </CardHeader>
                                 <CardContent>
                                     <div style={{ width: '100%', height: 300 }}>
-                                        <ResponsiveContainer>
+                                        <ResponsiveContainer width="100%" height="100%">
                                             <BarChart data={periodReport.daily_breakdown}>
                                                 <CartesianGrid strokeDasharray="3 3" />
                                                 <XAxis dataKey="date" tickFormatter={(d) => format(new Date(d), 'dd/MM')} />
