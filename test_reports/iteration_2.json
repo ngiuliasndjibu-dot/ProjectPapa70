@@ -1,0 +1,50 @@
+{
+  "summary": "Tested all new POS features: 5 new sidebar pages (Reservations, Loyalty, Ingredients, Reports, Restaurant Settings), backend merge/split endpoints, and frontend split/merge modals on /payments. Backend: 12/12 pytest tests passed (8 new module GETs + 4 merge/split scenarios including validation). Frontend: all 5 new pages navigate correctly with no console errors. Split modal opens, mode toggle (by_items/equal) works, end-to-end equal split confirmed (order count 18 -> 20, success toast 'Addition divisée avec succès'). Merge modal opens after selecting 2+ orders, target table dropdown renders.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "PaymentsPage - Merge target table dropdown",
+        "issue": "React warning: 'Encountered two children with the same key' when merging orders from the SAME table. SelectItem uses key={o.table_id}; duplicates occur if multiple selected orders share a table. Also a UX bug: same table appears multiple times in dropdown.",
+        "selector": "[data-testid='merge-target-table']",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "ReportsPage charts",
+        "issue": "Recharts warning: 'The width(-1) and height(-1) of chart should be greater than 0'. Chart container has zero size on initial render. Pre-existing issue from iteration 1, still present.",
+        "selector": "/reports recharts ResponsiveContainer",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_new_features.py",
+    "/app/test_reports/pytest/new_features.xml"
+  ],
+  "action_items": [
+    "Deduplicate the merge target table dropdown options (use a unique key like SelectItem key={o.id} or de-duplicate by table_id, and only render each table once).",
+    "Fix Recharts container sizing on Reports page (set explicit min-height or remove ResponsiveContainer aspect issue) — pre-existing, low priority."
+  ],
+  "critical_code_review_comments": [
+    "PaymentsPage.jsx (lines ~802-811): The Select for merge-target-table maps over mergeSelection (selected order ids). When two selected orders share the same table_id, two SelectItems are emitted with identical React keys, producing a console error and showing the table twice in the dropdown. Use a Set to dedupe by table_id before rendering.",
+    "Backend server.py is very large (~2915 lines). Consider splitting orders/merge/split, reservations, loyalty, ingredients, recipes, reports, restaurant settings into separate routers/modules for maintainability (>700 lines threshold)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_new_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 new feature pytest tests)",
+    "frontend": "95% (all flows OK; minor duplicate key warning on merge dropdown)"
+  },
+  "test_credentials": "admin / admin123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Backend pytest creates TEST_ORDER orders in DB; not cleaned up automatically (acceptable for preview env).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All 5 new pages route correctly. Backend POST /api/orders/merge and POST /api/orders/{id}/split (Pydantic body models MergeOrdersRequest/SplitOrderRequest) work for by_items and equal splits, return new_orders[] / merged order. Verified end-to-end UI for equal split (toast + reload). The only outstanding issue is the duplicate-key React warning + UX dedupe in the merge target table dropdown in PaymentsPage.jsx (~lines 802-811). Reports charts width/height warning is pre-existing.",
+  "rca of the issue": "Merge target table dropdown duplicate key — caused by mapping over selected order ids without deduplicating shared table_id. Fix: build a unique list of {table_id, table_number} from mergeSelection before rendering SelectItems."
+}

@@ -150,7 +150,7 @@ export default function ReportsPage() {
                                         <div className="flex items-center gap-3">
                                             <DollarSign className="w-8 h-8 text-green-500" />
                                             <div>
-                                                <p className="text-sm text-stone-500">Chiffre d'affaires</p>
+                                                <p className="text-sm text-stone-500">Chiffre d&apos;affaires</p>
                                                 <p className="text-xl font-bold">{formatDualCurrency(dailyReport.total_revenue)}</p>
                                             </div>
                                         </div>
@@ -257,7 +257,7 @@ export default function ReportsPage() {
                                                 <TableHead>#</TableHead>
                                                 <TableHead>Produit</TableHead>
                                                 <TableHead className="text-right">Quantité</TableHead>
-                                                <TableHead className="text-right">Chiffre d'affaires</TableHead>
+                                                <TableHead className="text-right">Chiffre d&apos;affaires</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -360,7 +360,7 @@ export default function ReportsPage() {
                                             <TableRow>
                                                 <TableHead>Date</TableHead>
                                                 <TableHead className="text-right">Commandes</TableHead>
-                                                <TableHead className="text-right">Chiffre d'affaires</TableHead>
+                                                <TableHead className="text-right">Chiffre d&apos;affaires</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ordersAPI, paymentsAPI } from '../lib/api';
+import { ordersAPI, paymentsAPI, tablesAPI, orderSplitMergeAPI } from '../lib/api';
 import { formatDate, getStatusLabel, getOrderStatusBadge } from '../lib/utils';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { Button } from '../components/ui/button';
@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Checkbox } from '../components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { toast } from 'sonner';
@@ -20,17 +21,33 @@ import {
     Receipt,
     DollarSign,
     CheckCircle,
-    ArrowRightLeft
+    ArrowRightLeft,
+    Split,
+    Merge,
+    Minus,
+    Plus
 } from 'lucide-react';
 
 export default function PaymentsPage() {
     const [orders, setOrders] = useState([]);
     const [payments, setPayments] = useState([]);
+    const [tables, setTables] = useState([]);
     const [dailyClose, setDailyClose] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    // Split / Merge state
+    const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+    const [splitOrder, setSplitOrder] = useState(null);
+    const [splitMode, setSplitMode] = useState('by_items'); // 'by_items' | 'equal'
+    const [splitSelectedItems, setSplitSelectedItems] = useState([]); // item ids for part A
+    const [splitEqualParts, setSplitEqualParts] = useState(2);
+    const [splitSubmitting, setSplitSubmitting] = useState(false);
+    const [mergeSelection, setMergeSelection] = useState([]); // order ids
+    const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+    const [mergeTargetTable, setMergeTargetTable] = useState('');
+    const [mergeSubmitting, setMergeSubmitting] = useState(false);
     const [paymentData, setPaymentData] = useState({
         amount: 0,
         amountInCurrency: 0,
@@ -59,14 +76,16 @@ export default function PaymentsPage() {
 
     const loadData = async () => {
         try {
-            const [ordersRes, paymentsRes, closeRes] = await Promise.all([
+            const [ordersRes, paymentsRes, closeRes, tablesRes] = await Promise.all([
                 ordersAPI.getAll(),
                 paymentsAPI.getAll(),
-                paymentsAPI.getDailyClose()
+                paymentsAPI.getDailyClose(),
+                tablesAPI.getAll()
             ]);
             setOrders(ordersRes.data.filter(o => o.status !== 'cancelled'));
             setPayments(paymentsRes.data);
             setDailyClose(closeRes.data);
+            setTables(tablesRes.data);
         } catch (err) {
             toast.error('Erreur lors du chargement');
         } finally {
@@ -165,6 +184,92 @@ export default function PaymentsPage() {
         return payments
             .filter(p => p.order_id === orderId)
             .reduce((sum, p) => sum + p.amount, 0);
+    };
+
+    // ---- Split bill ----
+    const openSplitDialog = (order) => {
+        setSplitOrder(order);
+        setSplitMode('by_items');
+        setSplitSelectedItems([]);
+        setSplitEqualParts(2);
+        setSplitDialogOpen(true);
+    };
+
+    const toggleSplitItem = (itemId) => {
+        setSplitSelectedItems(prev =>
+            prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+        );
+    };
+
+    const handleSplitSubmit = async () => {
+        if (!splitOrder) return;
+        setSplitSubmitting(true);
+        try {
+            if (splitMode === 'by_items') {
+                const allIds = (splitOrder.items || []).map(i => i.id);
+                const partA = splitSelectedItems;
+                const partB = allIds.filter(id => !partA.includes(id));
+                if (partA.length === 0 || partB.length === 0) {
+                    toast.error('Sélectionnez au moins un article pour chaque addition');
+                    setSplitSubmitting(false);
+                    return;
+                }
+                await orderSplitMergeAPI.split(splitOrder.id, 'by_items', {
+                    parts: [
+                        { item_ids: partA, table_id: splitOrder.table_id },
+                        { item_ids: partB, table_id: splitOrder.table_id },
+                    ]
+                });
+            } else {
+                await orderSplitMergeAPI.split(splitOrder.id, 'equal', {
+                    num_parts: splitEqualParts,
+                    table_ids: Array(splitEqualParts).fill(splitOrder.table_id)
+                });
+            }
+            toast.success('Addition divisée avec succès');
+            setSplitDialogOpen(false);
+            loadData();
+        } catch (err) {
+            toast.error(err.response?.data?.detail || 'Erreur lors de la division');
+        } finally {
+            setSplitSubmitting(false);
+        }
+    };
+
+    // ---- Merge bills ----
+    const toggleMergeSelection = (orderId) => {
+        setMergeSelection(prev =>
+            prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
+        );
+    };
+
+    const openMergeDialog = () => {
+        if (mergeSelection.length < 2) {
+            toast.error('Sélectionnez au moins 2 commandes à fusionner');
+            return;
+        }
+        const firstOrder = orders.find(o => o.id === mergeSelection[0]);
+        setMergeTargetTable(firstOrder?.table_id || '');
+        setMergeDialogOpen(true);
+    };
+
+    const handleMergeSubmit = async () => {
+        if (!mergeTargetTable) {
+            toast.error('Sélectionnez une table de destination');
+            return;
+        }
+        setMergeSubmitting(true);
+        try {
+            await orderSplitMergeAPI.merge(mergeSelection, mergeTargetTable);
+            toast.success('Commandes fusionnées avec succès');
+            setMergeDialogOpen(false);
+            setMergeSelection([]);
+            loadData();
+        } catch (err) {
+            toast.error(err.response?.data?.detail || 'Erreur lors de la fusion');
+        } finally {
+            setMergeSubmitting(false);
+        }
     };
 
     const pendingOrders = orders.filter(o => {
@@ -291,15 +396,27 @@ export default function PaymentsPage() {
 
             {/* Pending Orders Table */}
             <Card className="border-stone-100 shadow-sm">
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle style={{ fontFamily: 'Playfair Display, serif' }}>
                         Commandes en attente de paiement
                     </CardTitle>
+                    {mergeSelection.length >= 2 && (
+                        <Button
+                            onClick={openMergeDialog}
+                            className="rounded-full px-4 h-9"
+                            size="sm"
+                            data-testid="merge-orders-btn"
+                        >
+                            <Merge className="w-4 h-4 mr-2" />
+                            Fusionner ({mergeSelection.length})
+                        </Button>
+                    )}
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead className="w-10"></TableHead>
                                 <TableHead>N° Commande</TableHead>
                                 <TableHead>Table</TableHead>
                                 <TableHead>Serveur</TableHead>
@@ -316,6 +433,13 @@ export default function PaymentsPage() {
                                 const remaining = order.total - paidAmount;
                                 return (
                                     <TableRow key={order.id}>
+                                        <TableCell>
+                                            <Checkbox
+                                                checked={mergeSelection.includes(order.id)}
+                                                onCheckedChange={() => toggleMergeSelection(order.id)}
+                                                data-testid={`merge-select-${order.order_number}`}
+                                            />
+                                        </TableCell>
                                         <TableCell>
                                             <span className="font-bold">#{order.order_number}</span>
                                         </TableCell>
@@ -334,21 +458,36 @@ export default function PaymentsPage() {
                                             {formatPriceSelling(remaining)}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button
-                                                onClick={() => openPaymentDialog(order)}
-                                                className="rounded-full px-4 h-9"
-                                                size="sm"
-                                            >
-                                                <Receipt className="w-4 h-4 mr-2" />
-                                                Encaisser
-                                            </Button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                {(order.items?.length || 0) > 1 && (
+                                                    <Button
+                                                        onClick={() => openSplitDialog(order)}
+                                                        variant="outline"
+                                                        className="rounded-full px-3 h-9"
+                                                        size="sm"
+                                                        data-testid={`split-order-${order.order_number}`}
+                                                    >
+                                                        <Split className="w-4 h-4 mr-1" />
+                                                        Diviser
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    onClick={() => openPaymentDialog(order)}
+                                                    className="rounded-full px-4 h-9"
+                                                    size="sm"
+                                                    data-testid={`collect-payment-${order.order_number}`}
+                                                >
+                                                    <Receipt className="w-4 h-4 mr-2" />
+                                                    Encaisser
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 );
                             })}
                             {filteredOrders.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="text-center py-8 text-stone-500">
+                                    <TableCell colSpan={9} className="text-center py-8 text-stone-500">
                                         <CheckCircle className="w-12 h-12 mx-auto mb-2 opacity-20" />
                                         Aucune commande en attente de paiement
                                     </TableCell>
@@ -509,6 +648,183 @@ export default function PaymentsPage() {
                             disabled={paymentData.amountInCurrency <= 0}
                         >
                             Encaisser {formatPrice(paymentData.amountInCurrency, paymentData.currency)}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Split Bill Dialog */}
+            <Dialog open={splitDialogOpen} onOpenChange={setSplitDialogOpen}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle style={{ fontFamily: 'Playfair Display, serif' }}>
+                            Diviser l&apos;addition - Commande #{splitOrder?.order_number}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Séparez cette commande en plusieurs additions distinctes.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        {/* Mode selector */}
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button
+                                variant={splitMode === 'by_items' ? 'default' : 'outline'}
+                                onClick={() => setSplitMode('by_items')}
+                                data-testid="split-mode-by-items"
+                            >
+                                Par articles
+                            </Button>
+                            <Button
+                                variant={splitMode === 'equal' ? 'default' : 'outline'}
+                                onClick={() => setSplitMode('equal')}
+                                data-testid="split-mode-equal"
+                            >
+                                Montant égal
+                            </Button>
+                        </div>
+
+                        {splitMode === 'by_items' ? (
+                            <div className="space-y-2">
+                                <Label className="text-xs text-stone-500">
+                                    Sélectionnez les articles de la 1ère addition (le reste forme la 2ème)
+                                </Label>
+                                <div className="max-h-64 overflow-y-auto border rounded-lg divide-y">
+                                    {(splitOrder?.items || []).map((item) => (
+                                        <label
+                                            key={item.id}
+                                            className="flex items-center gap-3 p-3 cursor-pointer hover:bg-stone-50"
+                                        >
+                                            <Checkbox
+                                                checked={splitSelectedItems.includes(item.id)}
+                                                onCheckedChange={() => toggleSplitItem(item.id)}
+                                                data-testid={`split-item-${item.id}`}
+                                            />
+                                            <div className="flex-1">
+                                                <span className="text-sm font-medium">
+                                                    {item.quantity}× {item.menu_item_name}
+                                                </span>
+                                            </div>
+                                            <span className="text-sm text-primary font-semibold">
+                                                {formatPriceSelling(item.quantity * item.unit_price)}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                                <div className="flex justify-between text-sm pt-2">
+                                    <span className="text-stone-500">
+                                        Addition 1: {splitSelectedItems.length} article(s)
+                                    </span>
+                                    <span className="text-stone-500">
+                                        Addition 2: {(splitOrder?.items?.length || 0) - splitSelectedItems.length} article(s)
+                                    </span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <Label className="text-xs text-stone-500">Nombre d&apos;additions égales</Label>
+                                <div className="flex items-center gap-4">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setSplitEqualParts(p => Math.max(2, p - 1))}
+                                    >
+                                        <Minus className="w-4 h-4" />
+                                    </Button>
+                                    <span className="text-2xl font-bold w-12 text-center" data-testid="split-equal-count">
+                                        {splitEqualParts}
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setSplitEqualParts(p => Math.min(8, p + 1))}
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                                {splitOrder && (
+                                    <div className="text-center p-3 bg-stone-50 rounded-lg">
+                                        <p className="text-sm text-stone-500">Montant par addition</p>
+                                        <p className="text-2xl font-bold text-primary">
+                                            {formatPriceSelling(splitOrder.total / splitEqualParts)}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setSplitDialogOpen(false)}>
+                            Annuler
+                        </Button>
+                        <Button
+                            onClick={handleSplitSubmit}
+                            className="rounded-full px-6"
+                            disabled={splitSubmitting}
+                            data-testid="confirm-split-btn"
+                        >
+                            {splitSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Split className="w-4 h-4 mr-2" />}
+                            Diviser
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Merge Bills Dialog */}
+            <Dialog open={mergeDialogOpen} onOpenChange={setMergeDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle style={{ fontFamily: 'Playfair Display, serif' }}>
+                            Fusionner les commandes
+                        </DialogTitle>
+                        <DialogDescription>
+                            {mergeSelection.length} commandes seront regroupées en une seule addition.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-1 text-sm">
+                            {mergeSelection.map(id => {
+                                const o = orders.find(ord => ord.id === id);
+                                if (!o) return null;
+                                return (
+                                    <div key={id} className="flex justify-between p-2 bg-stone-50 rounded">
+                                        <span>#{o.order_number} — Table {o.table_number}</span>
+                                        <span className="font-medium">{formatPriceSelling(o.total)}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Table de destination</Label>
+                            <Select value={mergeTargetTable} onValueChange={setMergeTargetTable}>
+                                <SelectTrigger data-testid="merge-target-table">
+                                    <SelectValue placeholder="Choisir une table" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {mergeSelection.map(id => {
+                                        const o = orders.find(ord => ord.id === id);
+                                        if (!o) return null;
+                                        return (
+                                            <SelectItem key={o.table_id} value={o.table_id}>
+                                                Table {o.table_number}
+                                            </SelectItem>
+                                        );
+                                    })}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setMergeDialogOpen(false)}>
+                            Annuler
+                        </Button>
+                        <Button
+                            onClick={handleMergeSubmit}
+                            className="rounded-full px-6"
+                            disabled={mergeSubmitting}
+                            data-testid="confirm-merge-btn"
+                        >
+                            {mergeSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Merge className="w-4 h-4 mr-2" />}
+                            Fusionner
                         </Button>
                     </DialogFooter>
                 </DialogContent>

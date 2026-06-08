@@ -273,6 +273,14 @@ class OrderUpdate(BaseModel):
     notes: Optional[str] = None
     status: Optional[OrderStatus] = None
 
+class MergeOrdersRequest(BaseModel):
+    order_ids: List[str]
+    target_table_id: str
+
+class SplitOrderRequest(BaseModel):
+    split_type: str  # 'by_items' or 'equal'
+    split_data: dict
+
 class Order(OrderBase):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -2305,8 +2313,10 @@ async def deduct_ingredients_for_order(order_id: str):
 # ============== ORDER FUSION/SPLIT ROUTES ==============
 
 @api_router.post("/orders/merge")
-async def merge_orders(order_ids: List[str], target_table_id: str, current_user: dict = Depends(get_current_user)):
+async def merge_orders(req: MergeOrdersRequest, current_user: dict = Depends(get_current_user)):
     """Merge multiple orders into one"""
+    order_ids = req.order_ids
+    target_table_id = req.target_table_id
     if len(order_ids) < 2:
         raise HTTPException(status_code=400, detail="At least 2 orders required for merge")
     
@@ -2362,13 +2372,15 @@ async def merge_orders(order_ids: List[str], target_table_id: str, current_user:
     return merged_order
 
 @api_router.post("/orders/{order_id}/split")
-async def split_order(order_id: str, split_type: str, split_data: dict, current_user: dict = Depends(get_current_user)):
+async def split_order(order_id: str, req: SplitOrderRequest, current_user: dict = Depends(get_current_user)):
     """
     Split an order into multiple orders
     split_type: 'by_items' or 'equal'
     split_data for 'by_items': {"parts": [{"item_ids": [...], "table_id": "..."}, ...]}
     split_data for 'equal': {"num_parts": 2, "table_ids": ["...", "..."]}
     """
+    split_type = req.split_type
+    split_data = req.split_data
     order = await db.orders.find_one({"id": order_id}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")

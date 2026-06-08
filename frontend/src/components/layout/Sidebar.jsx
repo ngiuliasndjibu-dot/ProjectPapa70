@@ -18,6 +18,11 @@ import {
     User,
     Printer,
     Users,
+    CalendarClock,
+    Gift,
+    Carrot,
+    BarChart3,
+    Building2,
 } from 'lucide-react';
 
 const navItems = [
@@ -26,12 +31,17 @@ const navItems = [
     { path: '/pos', label: 'Point de vente', icon: ShoppingCart, roles: ['admin', 'server', 'cashier'] },
     { path: '/kitchen', label: 'Cuisine', icon: ChefHat, roles: ['admin', 'kitchen'] },
     { path: '/bar', label: 'Bar', icon: Wine, roles: ['admin', 'bartender'] },
+    { path: '/reservations', label: 'Réservations', icon: CalendarClock, roles: ['admin', 'cashier', 'server'] },
+    { path: '/loyalty', label: 'Fidélité', icon: Gift, roles: ['admin', 'cashier'] },
     { path: '/menu', label: 'Menu', icon: UtensilsCrossed, roles: ['admin'] },
     { path: '/stock', label: 'Stock', icon: Package, roles: ['admin'] },
+    { path: '/ingredients', label: 'Ingrédients', icon: Carrot, roles: ['admin'] },
     { path: '/bottles', label: 'Bouteilles', icon: Beaker, roles: ['admin', 'bartender'] },
     { path: '/payments', label: 'Paiements', icon: CreditCard, roles: ['admin', 'cashier'] },
+    { path: '/reports', label: 'Rapports', icon: BarChart3, roles: ['admin', 'cashier'] },
     { path: '/printers', label: 'Imprimantes', icon: Printer, roles: ['admin'] },
     { path: '/users', label: 'Utilisateurs', icon: Users, roles: ['admin'] },
+    { path: '/restaurant-settings', label: 'Établissement', icon: Building2, roles: ['admin'] },
     { path: '/settings', label: 'Paramètres', icon: Settings, roles: ['admin'] },
 ];
 

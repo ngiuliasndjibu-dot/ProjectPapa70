@@ -20,6 +20,11 @@ import PaymentsPage from './pages/PaymentsPage';
 import SettingsPage from './pages/SettingsPage';
 import PrintersPage from './pages/PrintersPage';
 import UsersPage from './pages/UsersPage';
+import RestaurantSettingsPage from './pages/RestaurantSettingsPage';
+import ReservationsPage from './pages/ReservationsPage';
+import IngredientsPage from './pages/IngredientsPage';
+import ReportsPage from './pages/ReportsPage';
+import LoyaltyPage from './pages/LoyaltyPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -201,6 +206,46 @@ function AppRoutes() {
                     element={
                         <ProtectedRoute allowedRoles={['admin']}>
                             <UsersPage />
+                        </ProtectedRoute>
+                    } 
+                />
+                <Route 
+                    path="/reservations" 
+                    element={
+                        <ProtectedRoute allowedRoles={['admin', 'cashier', 'server']}>
+                            <ReservationsPage />
+                        </ProtectedRoute>
+                    } 
+                />
+                <Route 
+                    path="/loyalty" 
+                    element={
+                        <ProtectedRoute allowedRoles={['admin', 'cashier']}>
+                            <LoyaltyPage />
+                        </ProtectedRoute>
+                    } 
+                />
+                <Route 
+                    path="/ingredients" 
+                    element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                            <IngredientsPage />
+                        </ProtectedRoute>
+                    } 
+                />
+                <Route 
+                    path="/reports" 
+                    element={
+                        <ProtectedRoute allowedRoles={['admin', 'cashier']}>
+                            <ReportsPage />
+                        </ProtectedRoute>
+                    } 
+                />
+                <Route 
+                    path="/restaurant-settings" 
+                    element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                            <RestaurantSettingsPage />
                         </ProtectedRoute>
                     } 
                 />
