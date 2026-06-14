@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { menuAPI } from '../lib/api';
 import { getDepartmentLabel } from '../lib/utils';
+import { compressImageToDataURL } from '../lib/imageUtils';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -21,7 +22,10 @@ import {
     Wine,
     Loader2,
     Search,
-    UtensilsCrossed
+    UtensilsCrossed,
+    Upload,
+    X,
+    ImageIcon
 } from 'lucide-react';
 
 export default function MenuPage() {
@@ -31,6 +35,8 @@ export default function MenuPage() {
     const [editingItem, setEditingItem] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState('all');
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const fileInputRef = useRef(null);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -113,6 +119,31 @@ export default function MenuPage() {
         } catch (err) {
             toast.error('Erreur lors de la suppression');
         }
+    };
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 8 * 1024 * 1024) {
+            toast.error('Image trop volumineuse (max 8 Mo)');
+            return;
+        }
+        setUploadingImage(true);
+        try {
+            const dataUrl = await compressImageToDataURL(file);
+            setFormData(prev => ({ ...prev, image_url: dataUrl }));
+            toast.success('Image ajoutée');
+        } catch (err) {
+            toast.error(err.message || 'Erreur lors du traitement de l\'image');
+        } finally {
+            setUploadingImage(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const removeImage = () => {
+        setFormData(prev => ({ ...prev, image_url: '' }));
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const toggleActive = async (item) => {
@@ -357,13 +388,77 @@ export default function MenuPage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="image_url">URL de l'image</Label>
-                            <Input
-                                id="image_url"
-                                value={formData.image_url}
-                                onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
-                                placeholder="https://..."
+                            <Label>Image de l&apos;article</Label>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                                className="hidden"
+                                data-testid="menu-image-file-input"
                             />
+                            {formData.image_url ? (
+                                <div className="relative w-full h-40 rounded-lg overflow-hidden border border-stone-200 bg-stone-50">
+                                    <img
+                                        src={formData.image_url}
+                                        alt="Aperçu"
+                                        className="w-full h-full object-cover"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={removeImage}
+                                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+                                        data-testid="menu-image-remove-btn"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploadingImage}
+                                    className="w-full h-40 rounded-lg border-2 border-dashed border-stone-300 flex flex-col items-center justify-center gap-2 text-stone-500 hover:border-primary hover:text-primary transition-colors bg-stone-50"
+                                    data-testid="menu-image-upload-btn"
+                                >
+                                    {uploadingImage ? (
+                                        <>
+                                            <Loader2 className="w-6 h-6 animate-spin" />
+                                            <span className="text-sm">Traitement...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Upload className="w-6 h-6" />
+                                            <span className="text-sm font-medium">Téléverser une image</span>
+                                            <span className="text-xs text-stone-400">JPG, PNG — redimensionnée automatiquement</span>
+                                        </>
+                                    )}
+                                </button>
+                            )}
+                            {formData.image_url && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploadingImage}
+                                    className="w-full"
+                                    data-testid="menu-image-change-btn"
+                                >
+                                    <ImageIcon className="w-4 h-4 mr-2" />
+                                    Changer l&apos;image
+                                </Button>
+                            )}
+                            <div className="pt-1">
+                                <Label htmlFor="image_url" className="text-xs text-stone-400">Ou coller une URL d&apos;image</Label>
+                                <Input
+                                    id="image_url"
+                                    value={formData.image_url.startsWith('data:') ? '' : formData.image_url}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+                                    placeholder="https://..."
+                                    className="mt-1"
+                                />
+                            </div>
                         </div>
                         <div className="flex items-center justify-between">
                             <Label htmlFor="is_active">Article actif</Label>
