@@ -1,68 +1,69 @@
 # ===========================================
-# Lumière POS - Docker Compose pour déploiement hybride
+# Egoli Pos - Docker Compose
 # ===========================================
-# Cette configuration permet de faire fonctionner le POS
-# en local avec synchronisation cloud automatique
+# Déploiement complet : MongoDB + Backend (FastAPI) + Frontend (React/Nginx)
+# Fonctionne aussi bien sur un PC local que sur un serveur cloud.
+#
+# Avant de lancer, copiez .env.example en .env et adaptez les valeurs.
+# Démarrage : docker compose up -d --build
 # ===========================================
-
-version: '3.8'
 
 services:
-  # Base de données MongoDB locale
+  # Base de données MongoDB
   mongodb:
     image: mongo:6.0
-    container_name: lumiere_mongodb
+    container_name: egoli_mongodb
     restart: always
     ports:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
     environment:
-      - MONGO_INITDB_DATABASE=lumiere_pos
+      - MONGO_INITDB_DATABASE=${DB_NAME:-egoli_pos}
     networks:
-      - lumiere_network
+      - egoli_network
 
   # Backend FastAPI
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: lumiere_backend
+    container_name: egoli_backend
     restart: always
     ports:
       - "8001:8001"
     environment:
       - MONGO_URL=mongodb://mongodb:27017
-      - DB_NAME=lumiere_pos
-      - JWT_SECRET=your-secure-jwt-secret-change-this
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:8080
-      # URL du serveur cloud pour synchronisation (optionnel)
-      - CLOUD_SYNC_URL=${CLOUD_SYNC_URL:-}
-      - CLOUD_SYNC_API_KEY=${CLOUD_SYNC_API_KEY:-}
+      - DB_NAME=${DB_NAME:-egoli_pos}
+      - JWT_SECRET=${JWT_SECRET:?Definir JWT_SECRET dans .env}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
     depends_on:
       - mongodb
     networks:
-      - lumiere_network
+      - egoli_network
 
-  # Frontend React
+  # Frontend React (servi par Nginx)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: lumiere_frontend
+      args:
+        # IMPORTANT : l'URL du backend est figée AU BUILD pour une app React (CRA).
+        # En local : http://localhost:8001
+        # En cloud : https://api.votre-domaine.com
+        REACT_APP_BACKEND_URL: ${REACT_APP_BACKEND_URL:-http://localhost:8001}
+    container_name: egoli_frontend
     restart: always
     ports:
       - "3000:3000"
-    environment:
-      - REACT_APP_BACKEND_URL=http://localhost:8001
     depends_on:
       - backend
     networks:
-      - lumiere_network
+      - egoli_network
 
 volumes:
   mongodb_data:
 
 networks:
-  lumiere_network:
+  egoli_network:
     driver: bridge
