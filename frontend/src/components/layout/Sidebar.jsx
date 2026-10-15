@@ -61,14 +61,14 @@ export const Sidebar = () => {
             {/* Logo */}
             <div className="p-4 lg:p-6 border-b border-stone-800">
                 <h1 className="hidden lg:block text-2xl font-bold text-white" style={{ fontFamily: 'Playfair Display, serif' }}>
-                    Egoli Pos
+                    Africiel Resto
                 </h1>
                 <span className="hidden lg:block text-xs text-stone-400 uppercase tracking-widest mt-1">
                     Point de Vente
                 </span>
                 <div className="lg:hidden flex items-center justify-center">
                     <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                        <span className="text-white font-bold">E</span>
+                        <span className="text-white font-bold">A</span>
                     </div>
                 </div>
             </div>
